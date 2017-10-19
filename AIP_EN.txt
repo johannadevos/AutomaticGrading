@@ -6,7 +6,7 @@ Antwoord: The Whorf’s language theory says that language limits our thinking. Yo
 Tentamennummer: 255
 Subjectcode: 741
 Punten: 6
-The Sapir-Whorfian Theory has two parts, the strong and the weak form. The weak form says that you can think in a more sophisticated way when you have more words included in your language that express these thoughts. You can describe your thoughts in more detail than people who do not have as much words to express their thoughts than you. \n The strong form of the theory says that if you do not have these words you cannot think properly. \n\n Scientists agree on the weak form of the theory but not on the strong form.
+Antwoord: The Sapir-Whorfian Theory has two parts, the strong and the weak form. The weak form says that you can think in a more sophisticated way when you have more words included in your language that express these thoughts. You can describe your thoughts in more detail than people who do not have as much words to express their thoughts than you. \n The strong form of the theory says that if you do not have these words you cannot think properly. \n\n Scientists agree on the weak form of the theory but not on the strong form.
 
 Tentamennummer: 245
 Subjectcode: 684
@@ -689,7 +689,7 @@ Tentamennummer: 371
 Subjectcode: ?
 Punten: 0
 Antwoord:
-Tentamennummer:373
+Tentamennummer: 373
 Subjectcode: 874
 Punten: 7
 Antwoord: The Whorfian hypothesis in it’s weak variation indicates that if a person can better use a language, (knows more words e.g.) he can better express his thoughts than a person who know less words. \n The weak variance has a strong acceptance within Psychology and is mentioned as verifable, even though it is criticized that other forms of knowledge (e.g. emotional/sensory) are also an indicator for intelligence. \n The strong variation of the Whorfian hypothesis indicates that within different languges the perception of the stimuli differs, because for example an english-speaking person has more words for color than one from New Guinea, and this makes the english speaking person, in the hypothesis, more intelligent in distinguish differences in the perception. \n The strong variation of the Whorfian hypothesis is proven wrong and in several test it was indicated that different languages don’t lead to different perception.
@@ -869,7 +869,7 @@ Antwoord: Whorf’s language theory is about the limitation of thinking if we don’
 Tentamennummer: 404
 Subjectcode: 657
 Punten: 0
-
+Antwoord: -
 Tentamennummer: 405
 Subjectcode: 624
 Punten: 6
@@ -1074,7 +1074,7 @@ Tentamennummer: 120
 Subjectcode: 751
 Punten: 6
 Antwoord: According to the Whorf’s language theory our mind is limited to our language. That means that we can only think more in detail about thinks if our language has a broad vocabulary with strong variations about this topic. One example for that could be Eskimos because their language has strong variations about the word “snow” which enable them to think more in detail about snow. In comparison to Americans whose language possess only a weak variations about the word snow which limits them to think about that topic.
-Tentamennummer: 330 (339?)
+Tentamennummer: 330
 Subjectcode: 858
 Punten: 10
 Antwoord: The (sapir-)whorfian theory has 2 variations. \n The first one is the weak variation. It says that language is influencing our thoughts. \n So if a language has many descriptions and many explanations, then you cannot think in more sophisticated ways. \n The second one is the strong variation of the whorfian hypothesis. It says that language limits our thoughts that we cannot beyond the borders of language. \n\n I agree with the weak variation, because in most of the case we do really think in words and it gives us the opportunity to express this. Some people say reading a book gives you better abilitys in language exams for example, because you are better equipped with words! So you can express your thoughts more precise. \n\n But I do not agree with the strong variation, because we can also think beyond borders of language. For E.G. very emotional feelings and thoughts that you cannot describe in words. So you do not think in words and this is a point where I would say that the language do not limit our thinking.
@@ -1491,10 +1491,6 @@ Tentamennummer: 125
 Subjectcode: 862
 Punten: 10
 Antwoord: The weak version of Whorf’s language theory says that when a language contains several words for specific concepts, then these concepts can be described in a more sophisticated way. The strong version of this theory mostly shaped by Wittgenstein is that language limits our thinking, so if we don’t know the word for something we cannot even think about it. The weak version of Whorf’s language theory explains, for instance, why inuits in Alaska can think of snow in more complex ways than Europeans do because they have several words describing the for us just called “snow”. However, the inuits have also more experience with snow, for example how sticky or fluffy it is. Following the strong version of Whorf’s language theory we Europeans couldn’t even think of different types of snow because we don’t know any other word than “snow”. People arguing against Wittgenstein’s theory, however, claim that you can think of different types of snow, for example, when you touch it. One can feel the difference and thus think about it. \n There is no exact conclusion, if Whorf’s language theory is totally right or not. Even among scientists there is no complete answer. There are some scientists supporting the weak variation of the theory and a greater part that is at least partly against it.
-Tentamennummer: 126
-Subjectcode: niet gebruiken
-Punten: 10
-Antwoord: Whorf’s language theory is about the relationship between language and thinking. The underlying question is how much the verbal capacity to express oneself limits the capacity to think in abstract ways. \n Indeed there  is empirical evidence for just that, in the way that a more refined ability of verbal expression is correlated to more differenciated ways of thinking - supporting the weak variation of the theory stating just that. \n The strong variation of Whorf’s language theory is more controversial. In its strong form, it is accurately describable with Wittgenstein’s “the limits of my language are the limits of my world”, meaning that thoughts neccesarily require a verbalisation in order to be thought in the first place. \n It is evidently easier to subscribe to the weaker version of the theory because it doesn’t have to apply to less complex thoughts like “I am hungry”; in the stronger variation one has to distinguish between different types of experiences, such as thought or feeling or mood etcetera. \n Both variations however give a plausible cause for the covariation of language and thoughts, which until now is observed only in humans to this degree. The strong variation can also be applied to the realm of philosophy, as Wittgenstein’s works so impressively prove.
 Tentamennummer: 127
 Subjectcode: 568
 Punten: 10
