@@ -10,10 +10,12 @@ import pandas as pd
 from nltk.tokenize import RegexpTokenizer
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import stopwords
+#from gensim import corpora, models
+import gensim
 #from nltk import word_tokenize, sent_tokenize 
 
 # Set working directory
-os.chdir('C:/Users/U908153/Desktop/Github/AutomaticGrading')
+#os.chdir('C:/Users/U908153/Desktop/Github/AutomaticGrading')
 
 # Open file
 def open_file():
@@ -78,14 +80,15 @@ def create_df(text):
     # Add empty columns that can later contain tokenized and lemmatized data
     df['Tokenized'] = ""
     df['Lemmatized'] = ""
+    df['Final'] = "" 
     
     # Change order of columns
-    cols = ['Subject code', 'Exam number', 'Grade', 'Answer', 'Tokenized', 'Lemmatized']
+    cols = ['Subject code', 'Exam number', 'Grade', 'Answer', 'Tokenized', 'Lemmatized', 'Final']
     df = df[cols]    
 
     return df
 
-# Tokenize and lemmatize
+# Tokenize, lemmatize, and remove stop words
 def tok_lem(df):
     
     # Set up tokenizer and lemmatizer
@@ -118,9 +121,26 @@ def tok_lem(df):
         
         df['Lemmatized'][i] = lem_answer
 
+        # Remove stop words
+        stopped_lemmas = [i for i in lem_answer if not i in stopwords.words('english')]
+        df['Final'][i] = stopped_lemmas
+        
     return df
 
+# Construct document-term matrix
+def doc_term(df):
+    dictionary = corpora.Dictionary(df['Final'])
+    
+    # Convert dictionary into bag of words
+    corpus = [dictionary.doc2bow(text) for text in df['Final']]
 
+    return dictionary, corpus
+
+# Generate LDA model
+def lda(dictionary, corpus):
+    ldamodel = gensim.models.ldamodel.LdaModel(corpus, num_topics=2, id2word = dictionary, passes = 5)
+    print(ldamodel.print_topics(num_topics=2, num_words=5))
+    return ldamodel
 
 # Run code
 if __name__ == "__main__":
@@ -128,5 +148,7 @@ if __name__ == "__main__":
     text = preprocess(raw_text)
     df = create_df(text)
     df = tok_lem(df)
+    dictionary, corpus = doc_term(df)
+    ldamodel = lda(dictionary, corpus)
 
 
