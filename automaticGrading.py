@@ -10,16 +10,15 @@ import pandas as pd
 from nltk.tokenize import RegexpTokenizer
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import stopwords
-#from gensim import corpora, models
-import gensim
-#from nltk import word_tokenize, sent_tokenize 
+from gensim import corpora, models
+from scipy.stats.stats import pearsonr
 
 # Set working directory
 #os.chdir('C:/Users/U908153/Desktop/Github/AutomaticGrading')
 
 # Open file
-def open_file():
-    with open ('AIP_EN.txt') as file:
+def open_file(file):
+    with open (file) as file:
         raw_text = file.read()
         
         return raw_text
@@ -86,7 +85,13 @@ def create_df(text):
     cols = ['Subject code', 'Exam number', 'Grade', 'Answer', 'Tokenized', 'Lemmatized', 'Final']
     df = df[cols]    
 
-    return df
+    return df, cols
+
+# Add reference answer to dataframe
+def add_ref(ref_answer, cols):
+    ref = pd.Series(["Ref","Ref","Ref",ref_answer_raw,"","",""], index = cols)
+    df_ref = df.append(ref, ignore_index = True)
+    return df_ref   
 
 # Tokenize, lemmatize, and remove stop words
 def tok_lem(df):
@@ -130,25 +135,64 @@ def tok_lem(df):
 # Construct document-term matrix
 def doc_term(df):
     dictionary = corpora.Dictionary(df['Final'])
+    print(dictionary.token2id)
     
     # Convert dictionary into bag of words
-    corpus = [dictionary.doc2bow(text) for text in df['Final']]
-
-    return dictionary, corpus
+    dtm_stu = [dictionary.doc2bow(text) for text in df['Final'][:-1]] # Student answers
+    dtm_ref = [dictionary.doc2bow(text) for text in df['Final'][-1:]] # Reference answer
+    dtm_ref = dtm_ref[0]
+    
+    return dictionary, dtm_stu, dtm_ref
 
 # Generate LDA model
 def lda(dictionary, corpus):
-    ldamodel = gensim.models.ldamodel.LdaModel(corpus, num_topics=2, id2word = dictionary, passes = 5)
-    print(ldamodel.print_topics(num_topics=2, num_words=5))
+    ldamodel = models.ldamodel.LdaModel(corpus, num_topics=2, id2word = dictionary, passes = 5)
+    #print(ldamodel.print_topics(num_topics=2, num_words=5))
     return ldamodel
+
+# Correlate raw frequencies
+def cor_ref_stu(dtm_ref, dtm_stu):
+
+    ID_ref = [i[0] for i in dtm_ref] # List of word IDs in the reference answer
+    correlations = []
+    
+    for stu in range(len(dtm_stu)): # For all student answers
+        print(stu)
+        dtm_ref2 = dtm_ref[:] # Make a copy of the document-term matrix of the reference answer
+        
+        ID_stu = [i[0] for i in dtm_stu[stu]] # List of word IDs in the student's answer
+    
+        for i,j in dtm_ref: # For all IDs and counts in the reference answer
+            if not i in ID_stu: # If the ID is not in the student's answer
+                dtm_stu[stu].append((i, 0)) # Append this ID, and give count 0
+                
+        for i,j in dtm_stu[stu]: # For all IDs and counts in the student's answer
+            if not i in ID_ref: # If the ID is not in the reference answer
+                dtm_ref2.append((i, 0)) # Append this ID, and give count 0
+        
+        dtm_ref2.sort(key=lambda x: x[0]) # Sort the DTM of the reference answer by ID
+        dtm_stu[stu].sort(key=lambda x: x[0]) # Sort the DTM of the student's answer by ID
+        
+        counts_ref = [i[1] for i in dtm_ref2] # Extract the counts from the reference answer
+        counts_stu = [i[1] for i in dtm_stu[stu]] # Extract the counts from the student's answer
+        
+        correlation = pearsonr(counts_ref, counts_stu) # Calculate correlations
+        correlations.append(correlation[0]) # Correlation[1] is the p-value
+        
+    return correlations
 
 # Run code
 if __name__ == "__main__":
-    raw_text = open_file()
-    text = preprocess(raw_text)
-    df = create_df(text)
-    df = tok_lem(df)
-    dictionary, corpus = doc_term(df)
-    ldamodel = lda(dictionary, corpus)
+    
+    ref_answer_raw = open_file('referenceAnswer.txt') # Read reference answer
+    ref_answer = preprocess(ref_answer_raw) # Preprocess reference answer
+    stud_answers_raw = open_file('studentAnswers.txt') # Read student answers
+    stud_answers = preprocess(stud_answers_raw) # Preprocess student answers
+    df, cols = create_df(stud_answers) # Create dataframe of student answers
+    df = add_ref(ref_answer, cols) # Add reference answer to dataframe
+    df = tok_lem(df) # Tokenize and lemmatize all answers, and remove stop words
+    dictionary, dtm_stu, dtm_ref = doc_term(df) # Create dictionary and get frequency counts
+    correlations = cor_ref_stu(dtm_ref, dtm_stu)
+    ldamodel = lda(dictionary, corpus_stu) # Train LDA model on student data
 
-
+   
