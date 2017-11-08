@@ -69,7 +69,7 @@ def create_df(text):
             subject_codes.append(subject_code)
         elif i%4 == 2:
             grade = text[i][7:]
-            grades.append(grade)
+            grades.append(int(grade))
         elif i%4 == 3:
             answer = text[i][10:]
             answers.append(answer)
@@ -133,10 +133,10 @@ def tok_lem(df):
         
     return df
 
-# Construct document-term matrix
+# Construct document-term matrices
 def doc_term(df):
     dictionary = corpora.Dictionary(df['Final'])
-    print(dictionary.token2id)
+    #print(dictionary.token2id)
     
     # Convert dictionary into bag of words
     dtm_stu = [dictionary.doc2bow(text) for text in df['Final'][:-1]] # Student answers
@@ -181,13 +181,28 @@ def cor_ref_stu(dtm_ref, dtm_stu):
     return correlations
 
 # Generate LDA model
-def lda(dictionary, corpus):
-    ldamodel = models.ldamodel.LdaModel(corpus, num_topics=5, id2word = dictionary, passes = 5)
-    print(ldamodel.print_topics(num_topics=5, num_words=5))
+def lda(dictionary, dtm_stu):
+    ldamodel = models.ldamodel.LdaModel(dtm_stu, num_topics=2, id2word = dictionary, passes = 20)
+    print(ldamodel.print_topics(num_topics=2, num_words=5))
     return ldamodel
 
 # Calculate document similarities with LDA model
-sim = gensim.matutils.cossim(vec_lda1, vec_lda2)
+def sim(df, dtm_ref, dtm_stu):
+    sim_scores = []
+    
+    for stu in range(len(dtm_stu)):
+        if dtm_stu[stu]:
+            sim = gensim.matutils.cossim(ldamodel[dtm_ref], ldamodel[dtm_stu[stu]])
+            print("The cosine similarity is:", sim, "and the grade was:", df['Grade'][stu])
+            #print(df['Final'][stu])
+            sim_scores.append(sim)
+        elif not dtm_stu[stu]:
+            sim_scores.append(0)
+    
+    grades = df['Grade'][:-1].tolist()
+    print(pearsonr(sim_scores, grades))
+    
+    return sim_scores
 
 # Run code
 if __name__ == "__main__":
@@ -202,5 +217,5 @@ if __name__ == "__main__":
     dictionary, dtm_stu, dtm_ref = doc_term(df) # Create dictionary and get frequency counts
     #correlations = cor_ref_stu(dtm_ref, dtm_stu)
     ldamodel = lda(dictionary, dtm_stu) # Train LDA model on student data
-
+    sim_scores = sim(df, dtm_ref, dtm_stu)
    
