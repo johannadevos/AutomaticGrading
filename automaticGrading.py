@@ -7,6 +7,7 @@
 # Import modules
 import os
 import pandas as pd
+import gensim
 from nltk.tokenize import RegexpTokenizer
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import stopwords
@@ -144,42 +145,49 @@ def doc_term(df):
     
     return dictionary, dtm_stu, dtm_ref
 
-# Generate LDA model
-def lda(dictionary, corpus):
-    ldamodel = models.ldamodel.LdaModel(corpus, num_topics=2, id2word = dictionary, passes = 5)
-    #print(ldamodel.print_topics(num_topics=2, num_words=5))
-    return ldamodel
-
 # Correlate raw frequencies
 def cor_ref_stu(dtm_ref, dtm_stu):
 
     ID_ref = [i[0] for i in dtm_ref] # List of word IDs in the reference answer
+    dtm_stu2 = dtm_stu[:] # Make a copy of the document-term matrix of the students' answers
     correlations = []
     
-    for stu in range(len(dtm_stu)): # For all student answers
+    for stu in range(len(dtm_stu2)): # For all student answers
         print(stu)
         dtm_ref2 = dtm_ref[:] # Make a copy of the document-term matrix of the reference answer
         
-        ID_stu = [i[0] for i in dtm_stu[stu]] # List of word IDs in the student's answer
+        ID_stu = [i[0] for i in dtm_stu2[stu]] # List of word IDs in the student's answer
     
         for i,j in dtm_ref: # For all IDs and counts in the reference answer
             if not i in ID_stu: # If the ID is not in the student's answer
-                dtm_stu[stu].append((i, 0)) # Append this ID, and give count 0
+                dtm_stu2[stu].append((i, 0)) # Append this ID, and give count 0
                 
-        for i,j in dtm_stu[stu]: # For all IDs and counts in the student's answer
+        for i,j in dtm_stu2[stu]: # For all IDs and counts in the student's answer
             if not i in ID_ref: # If the ID is not in the reference answer
                 dtm_ref2.append((i, 0)) # Append this ID, and give count 0
         
         dtm_ref2.sort(key=lambda x: x[0]) # Sort the DTM of the reference answer by ID
-        dtm_stu[stu].sort(key=lambda x: x[0]) # Sort the DTM of the student's answer by ID
+        dtm_stu2[stu].sort(key=lambda x: x[0]) # Sort the DTM of the student's answer by ID
         
         counts_ref = [i[1] for i in dtm_ref2] # Extract the counts from the reference answer
-        counts_stu = [i[1] for i in dtm_stu[stu]] # Extract the counts from the student's answer
+        counts_stu = [i[1] for i in dtm_stu2[stu]] # Extract the counts from the student's answer
         
         correlation = pearsonr(counts_ref, counts_stu) # Calculate correlations
         correlations.append(correlation[0]) # Correlation[1] is the p-value
         
+        co_sim = gensim.matutils.cossim(counts_ref, counts_stu)                   
+        print(co_sim)
+        
     return correlations
+
+# Generate LDA model
+def lda(dictionary, corpus):
+    ldamodel = models.ldamodel.LdaModel(corpus, num_topics=5, id2word = dictionary, passes = 5)
+    print(ldamodel.print_topics(num_topics=5, num_words=5))
+    return ldamodel
+
+# Calculate document similarities with LDA model
+sim = gensim.matutils.cossim(vec_lda1, vec_lda2)
 
 # Run code
 if __name__ == "__main__":
@@ -192,7 +200,7 @@ if __name__ == "__main__":
     df = add_ref(ref_answer, cols) # Add reference answer to dataframe
     df = tok_lem(df) # Tokenize and lemmatize all answers, and remove stop words
     dictionary, dtm_stu, dtm_ref = doc_term(df) # Create dictionary and get frequency counts
-    correlations = cor_ref_stu(dtm_ref, dtm_stu)
-    ldamodel = lda(dictionary, corpus_stu) # Train LDA model on student data
+    #correlations = cor_ref_stu(dtm_ref, dtm_stu)
+    ldamodel = lda(dictionary, dtm_stu) # Train LDA model on student data
 
    
