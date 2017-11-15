@@ -5,20 +5,27 @@
 # Automatic grading of open exam questions
 
 # Import modules
-import os
 import pandas as pd
 import gensim
+import random
+import os
 from nltk.tokenize import RegexpTokenizer
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import stopwords
 from gensim import corpora, models
 from scipy.stats.stats import pearsonr
+from sklearn.model_selection import train_test_split
+
+# Set seed for reproducability of results
+random.seed(2017)
 
 # Set working directory
-#os.chdir('C:/Users/U908153/Desktop/Github/AutomaticGrading')
+os.chdir("C:/Users/U908153/Desktop/GitHub/AutomaticGrading")
 
 # Open file
 def open_file(file):
+    print("Opening file...")
+    
     with open (file) as file:
         raw_text = file.read()
         
@@ -26,6 +33,7 @@ def open_file(file):
 
 # Preprocess text
 def preprocess(raw_text):
+    print("Preprocessing raw text...")
     
     # For empty anwers, insert a dash
     text = raw_text.replace("Antwoord:\n", "Antwoord: -\n")
@@ -54,6 +62,8 @@ def preprocess(raw_text):
 
 # Rearrange the data in a dataframe
 def create_df(text):
+    print("Creating data frame...")
+    
     exam_numbers = []
     subject_codes = []
     grades = []
@@ -90,12 +100,14 @@ def create_df(text):
 
 # Add reference answer to dataframe
 def add_ref(ref_answer, cols):
+    print("Adding reference answer...")
     ref = pd.Series(["Ref","Ref","Ref",ref_answer_raw,"","",""], index = cols)
     df_ref = df.append(ref, ignore_index = True)
     return df_ref   
 
 # Tokenize, lemmatize, and remove stop words
 def tok_lem(df):
+    print("Tokenizing, lemmatizing, and removing stop words...")
     
     # Set up tokenizer and lemmatizer
     tokenizer = RegexpTokenizer(r'\w+')
@@ -133,77 +145,85 @@ def tok_lem(df):
         
     return df
 
-# Construct document-term matrices
-def doc_term(df):
+# Create dictionary of vocabulary
+def dictionary(df):
+    print("Creating a dictionary...")
+    
     dictionary = corpora.Dictionary(df['Final'])
+    
+    return dictionary
+
+# Create training, validation and test set
+def split(df):
+    print("Creating a training, validation and test set...")
+    
+    ref = df[-1:]
+    train, test = train_test_split(df[:-1], test_size = 0.2, random_state = 2017) # Split 80/20, pseudo-random number for reproducability
+    return ref, train, test
+    
+# Implement k-fold cross validation
+# https://towardsdatascience.com/train-test-split-and-cross-validation-in-python-80b61beca4b6
+
+# Construct document-term matrices
+def doc_term(train, test, ref):
+    print("Creating document-term matrices...")
     #print(dictionary.token2id)
     
     # Convert dictionary into bag of words
-    dtm_stu = [dictionary.doc2bow(text) for text in df['Final'][:-1]] # Student answers
-    dtm_ref = [dictionary.doc2bow(text) for text in df['Final'][-1:]] # Reference answer
+    dtm_train = [dictionary.doc2bow(text) for text in train['Final']] # Student answers, train split
+    dtm_test = [dictionary.doc2bow(text) for text in test['Final']] # Student answers, test split
+    dtm_ref = [dictionary.doc2bow(text) for text in ref['Final']] # Reference answer
     dtm_ref = dtm_ref[0]
     
-    return dictionary, dtm_stu, dtm_ref
-
-# Correlate raw frequencies
-def cor_ref_stu(dtm_ref, dtm_stu):
-
-    ID_ref = [i[0] for i in dtm_ref] # List of word IDs in the reference answer
-    dtm_stu2 = dtm_stu[:] # Make a copy of the document-term matrix of the students' answers
-    correlations = []
-    
-    for stu in range(len(dtm_stu2)): # For all student answers
-        print(stu)
-        dtm_ref2 = dtm_ref[:] # Make a copy of the document-term matrix of the reference answer
-        
-        ID_stu = [i[0] for i in dtm_stu2[stu]] # List of word IDs in the student's answer
-    
-        for i,j in dtm_ref: # For all IDs and counts in the reference answer
-            if not i in ID_stu: # If the ID is not in the student's answer
-                dtm_stu2[stu].append((i, 0)) # Append this ID, and give count 0
-                
-        for i,j in dtm_stu2[stu]: # For all IDs and counts in the student's answer
-            if not i in ID_ref: # If the ID is not in the reference answer
-                dtm_ref2.append((i, 0)) # Append this ID, and give count 0
-        
-        dtm_ref2.sort(key=lambda x: x[0]) # Sort the DTM of the reference answer by ID
-        dtm_stu2[stu].sort(key=lambda x: x[0]) # Sort the DTM of the student's answer by ID
-        
-        counts_ref = [i[1] for i in dtm_ref2] # Extract the counts from the reference answer
-        counts_stu = [i[1] for i in dtm_stu2[stu]] # Extract the counts from the student's answer
-        
-        correlation = pearsonr(counts_ref, counts_stu) # Calculate correlations
-        correlations.append(correlation[0]) # Correlation[1] is the p-value
-        
-        co_sim = gensim.matutils.cossim(counts_ref, counts_stu)                   
-        print(co_sim)
-        
-    return correlations
+    return dtm_train, dtm_test, dtm_ref
 
 # Generate LDA model
-def lda(dictionary, dtm_stu):
-    ldamodel = models.ldamodel.LdaModel(dtm_stu, num_topics=2, id2word = dictionary, passes = 20)
-    print(ldamodel.print_topics(num_topics=2, num_words=5))
-    return ldamodel
+def lda(dictionary, dtm_train):
+    print("Training the LDA model...")
+    
+    ldamod = models.ldamodel.LdaModel(dtm_train, num_topics=2, id2word = dictionary, passes = 20)
+    print(ldamod.print_topics(num_topics=2, num_words=5))
+    
+    return ldamod
 
 # Calculate document similarities with LDA model
 def sim(df, dtm_ref, dtm_stu):
+    print("Calculating similarity scores...")
+    
     sim_scores = []
+    counter = 0
     
-    for stu in range(len(dtm_stu)):
-        if dtm_stu[stu]:
-            sim = gensim.matutils.cossim(ldamodel[dtm_ref], ldamodel[dtm_stu[stu]])
-            print("The cosine similarity is:", sim, "and the grade was:", df['Grade'][stu])
-            #print(df['Final'][stu])
+    for index, row in df.iterrows():
+        if dtm_stu[counter]: # If the answer contains text
+            sim = gensim.matutils.cossim(ldamod[dtm_ref], ldamod[dtm_stu[counter]])
+            print("The cosine similarity is:", sim, "and the grade was:", df['Grade'][index])
             sim_scores.append(sim)
-        elif not dtm_stu[stu]:
+        elif not dtm_stu[counter]: # If the answer is empty
             sim_scores.append(0)
+            
+        counter += 1
     
-    grades = df['Grade'][:-1].tolist()
+    grades = df['Grade'].tolist()
     print(pearsonr(sim_scores, grades))
     
     return sim_scores
 
+# Transform similarity scores into grades
+def sim_to_grade(sim_scores):
+    print("Transforming similarity scores into grades...")
+    
+    # Multiply the similarity scores by 10
+    pred_grades = [round(sim*10) for sim in sim_scores] 
+
+    return pred_grades
+
+# Evaluate: correlate predicted grades with lecturer-assigned grades
+def corr(pred_grades):
+    lec_grades = train['Grade'].tolist()
+    corr, sig = pearsonr(pred_grades, lec_grades)
+    
+    return corr
+           
 # Run code
 if __name__ == "__main__":
     
@@ -214,8 +234,17 @@ if __name__ == "__main__":
     df, cols = create_df(stud_answers) # Create dataframe of student answers
     df = add_ref(ref_answer, cols) # Add reference answer to dataframe
     df = tok_lem(df) # Tokenize and lemmatize all answers, and remove stop words
-    dictionary, dtm_stu, dtm_ref = doc_term(df) # Create dictionary and get frequency counts
-    #correlations = cor_ref_stu(dtm_ref, dtm_stu)
-    ldamodel = lda(dictionary, dtm_stu) # Train LDA model on student data
-    sim_scores = sim(df, dtm_ref, dtm_stu)
-   
+    dictionary = dictionary(df) # Create dictionary of vocabulary
+    ref, train, test = split(df) # Split the data into a 80/20 (train/test)
+    dtm_train, dtm_test, dtm_ref = doc_term(train, test, ref) # Create dictionary and get frequency counts
+    ldamod = lda(dictionary, dtm_train) # Train LDA model on train split
+    sim_scores = sim(train, dtm_ref, dtm_train) # Similarity scores for training data
+    pred_grades = sim_to_grade(sim_scores)
+    corr = corr(pred_grades)
+
+
+
+
+
+
+
