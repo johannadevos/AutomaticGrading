@@ -20,7 +20,8 @@ from sklearn.model_selection import train_test_split
 random.seed(2017)
 
 # Set working directory
-os.chdir("C:/Users/U908153/Desktop/GitHub/AutomaticGrading")
+#os.chdir("C:/Users/U908153/Desktop/GitHub/AutomaticGrading")
+os.chdir("C:/Users/johan/Documents/GitHub/AutomaticGrading")
 
 # Open file
 def open_file(file):
