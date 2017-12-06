@@ -60,7 +60,7 @@ def preprocess(raw_text):
     
     return text
 
-# Rearrange the data in a dataframe
+# Rearrange the students' answers in a dataframe
 def create_df(text):
     print("Creating data frame...")
     
@@ -104,6 +104,24 @@ def add_ref(ref_answer, cols):
     ref = pd.Series(["Ref","Ref","Ref",ref_answer_raw,"","",""], index = cols)
     df_ref = df.append(ref, ignore_index = True)
     return df_ref   
+
+# Create dataframe for other input texts
+def create_df_book(text):
+    print("Creating data frame...")
+    
+    # Create dataframe
+    df = pd.DataFrame({'Answer': text})
+    
+    # Add empty columns that can later contain tokenized and lemmatized data
+    df['Tokenized'] = ""
+    df['Lemmatized'] = ""
+    df['Final'] = "" 
+    
+    # Change order of columns
+    cols = ['Answer', 'Tokenized', 'Lemmatized', 'Final']
+    df = df[cols]    
+    
+    return df, cols
 
 # Tokenize, lemmatize, and remove stop words
 def tok_lem(df):
@@ -219,6 +237,8 @@ def sim_to_grade(sim_scores):
 
 # Evaluate: correlate predicted grades with lecturer-assigned grades
 def corr(pred_grades):
+    print("Correlating the predicted grades with the lecturer's grades...")
+    
     lec_grades = train['Grade'].tolist()
     corr, sig = pearsonr(pred_grades, lec_grades)
     
@@ -242,8 +262,12 @@ if __name__ == "__main__":
     pred_grades = sim_to_grade(sim_scores)
     corr = corr(pred_grades)
 
-
-
+    
+    # Domain-specific text
+    book_raw = open_file('psyBook.txt')
+    book = preprocess(book_raw)
+    df_book, cols_book = create_df_book(book)    
+    df_book = tok_lem(df_book)
 
 
 
