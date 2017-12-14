@@ -12,11 +12,14 @@ import os
 from nltk.tokenize import RegexpTokenizer
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import stopwords
+from nltk.tokenize import sent_tokenize
 from gensim import corpora, models
 from scipy.stats.stats import pearsonr
 from sklearn.model_selection import train_test_split
 import sklearn.model_selection
 import matplotlib.pyplot as plt
+from collections import Counter
+from ggplot import *
 
 # Set seed for reproducability of results
 random.seed(2017)
@@ -57,9 +60,6 @@ def preprocess(raw_text):
     text = text.replace("can't", "cannot")
     text = text.replace("n't", " not")
     
-    # Split text by newline
-    text = text.split("\n")
-    
     return text
 
 # Rearrange the students' answers in a dataframe
@@ -70,6 +70,9 @@ def create_df(text):
     subject_codes = []
     grades = []
     answers = []
+    
+    # Split text by newline
+    text = text.split("\n")
     
     # Extract information from running text
     for i in range(len(text)):
@@ -130,7 +133,7 @@ def tok_lem(df):
     print("Tokenizing, lemmatizing, and removing stop words...")
     
     # Make SubjectCode the index of the dataframe
-    df = df.set_index("SubjectCode")
+    #df = df.set_index("SubjectCode") --> with this line, preprocessing the book no longer works
     
     # Set up tokenizer and lemmatizer
     tokenizer = RegexpTokenizer(r'\w+')
@@ -189,9 +192,9 @@ def split(df):
 def lda(dictio, dtm_train):
     print("Training the LDA model...")
     
-    ldamod = models.ldamodel.LdaModel(dtm_train, num_topics=2, id2word = dictio, passes = 20)
-    print("This is the LDA model for this fold:")
-    print(ldamod.print_topics(num_topics=4, num_words=2))
+    ldamod = models.ldamodel.LdaModel(dtm_train, num_topics=6, id2word = dictio, passes = 20)
+    print("This is the LDA model:")
+    print(ldamod.print_topics(num_topics=6, num_words=2))
     
     return ldamod
 
@@ -221,8 +224,8 @@ def sim_to_grade(sim_scores):
 
     return pred_grades
 
-# Implement 10-fold cross validation for the LDA part of the study
-
+# Training an LDA on the exam data, and using this model to predict grades on a validation set
+# (10-fold cross-validation)
 def cross_val_lda(train, ref, dictio):
 
     # Document-term matrix for reference answer
@@ -277,20 +280,63 @@ def cross_val_lda(train, ref, dictio):
         print("The correlation between the predicted and real grades is:", correl, "\n")
         
         # Plot the predicted grades and lecturer-assigned grades
-        # TO DO:indicate how many points there are in each combination (size of dots?)
-        plt.scatter(pred_grades, val_grades)
-        plt.xlabel("Predicted grades")
-        plt.ylabel("Grades assigned by lecturer")
-
+        df_grades = pd.DataFrame({'Predicted': pred_grades, 'Assigned': val_grades})
+        df_counts = df_grades.groupby(['Predicted', 'Assigned']).size().reset_index(name='Count')
+        df_counts.plot(kind='scatter', x='Predicted', y='Assigned', s=df_counts['Count'])
+       
     # Average correlation over 10 folds
     av_corr = sum(all_corrs) / len(all_corrs)
     print("The average correlation over 10 folds is:", av_corr)
-      
+
+# Training an LDA on a psychology text book, and using this model to predict grades on the training set
+def lda_book(df_book, train, ref):
+    
+        # Get a list of all sentences in the book
+        book_texts = list(df_book['NoStops'])
+        
+        # Get the document-term matrix for the book       
+        dictio_book = dictionary(df_book) # Create dictionary of vocabulary
+        dtm_book = [dictio.doc2bow(text) for text in book_texts] 
+        
+        # Train LDA model
+        ldamod_book = lda(dictio_book, dtm_book)
+
+        # Document-term matrix for student answers
+        dtm_train = [dictio_book.doc2bow(text) for text in train['NoStops']] # Student answers, train split
+
+        # Document-term matrix for reference answer
+        dtm_ref = [dictio_book.doc2bow(text) for text in ref['NoStops']] # Reference answer
+        dtm_ref = dtm_ref[0]
+    
+        # Get similarity scores of training answers to reference answer
+        # TO DO: similarity scores are unreasonably high (often around .99)
+        # As a result, only grades of 10 are predicted
+        sim_scores = sim(ldamod_book, dtm_train, dtm_ref)
+        print(sim_scores)
+        
+        # Transform similarity scores into grades
+        # TO DO: use the training set to try out different mapping algorithms?
+        pred_grades = sim_to_grade(sim_scores)
+        
+        # Get assigned grades
+        val_grades = list(train["Grade"])
+        
+        # Get correlation between predicted grades (validation set) and lecturer-assigned grades 
+        # TO DO: exclude empty answers from this calculation, as they improve the score without improving the algorithm
+        # (Empty answers are always scores as 0)
+        correl, sig = pearsonr(pred_grades, val_grades) 
+        print("The correlation between the predicted and real grades is:", correl, "\n")
+        
+        # Plot the predicted grades and lecturer-assigned grades
+        df_grades = pd.DataFrame({'Predicted': pred_grades, 'Assigned': val_grades})
+        df_counts = df_grades.groupby(['Predicted', 'Assigned']).size().reset_index(name='Count')
+        df_counts.plot(kind='scatter', x='Predicted', y='Assigned', s=df_counts['Count'])  
 
 
 # Run code
 if __name__ == "__main__":
     
+    # Read and prepare student data
     ref_answer_raw = open_file('referenceAnswer.txt') # Read reference answer
     ref_answer = preprocess(ref_answer_raw) # Preprocess reference answer
     stud_answers_raw = open_file('studentAnswers.txt') # Read student answers
@@ -300,18 +346,28 @@ if __name__ == "__main__":
     df = tok_lem(df) # Tokenize and lemmatize all answers, and remove stop words
     dictio = dictionary(df) # Create dictionary of vocabulary
     ref, train, test = split(df) # Split the data into a 80/20 (train/test)
+    
+    # Train an LDA model on the student data and predict grades
     cross_val_lda(train, ref, dictio)
        
-
-
-                                    
-    '''
-    # Domain-specific text
-    book_raw = open_file('psyBook.txt')
-    book = preprocess(book_raw)
-    df_book, cols_book = create_df_book(book)    
-    df_book = tok_lem(df_book)
-    '''
+    # Read and prepare Psychology book
+    book_raw = open_file('psyBook.txt') # Open book
+    #book_test = book_raw[:50000]
+    book = book_raw.replace("\n", " ") # Remove white lines
+    book = book.replace(chr(0x00AD), "") # Remove soft hyphens
+    book = preprocess(book) # Preprocess book
+    sent_book = sent_tokenize(book) # Split into sentences
+    df_book, cols_book = create_df_book(sent_book) # Create dataframe 
+    df_book = tok_lem(df_book) # Tokenize, lemmatize, remove stop words
+    
+    # Train an LDA model on the book and predict grades  
+    lda_book(df_book, train, ref) 
+    
+    #TO DO: implement tf-idf
+    # https://gist.github.com/clemsos/7692685
+    
+    
+    
 
 
 
