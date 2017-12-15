@@ -13,7 +13,7 @@ from nltk.tokenize import RegexpTokenizer
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import stopwords
 from nltk.tokenize import sent_tokenize
-from gensim import corpora, models
+from gensim import corpora, models, utils
 from scipy.stats.stats import pearsonr
 from scipy.sparse import csr_matrix
 from scipy import spatial
@@ -205,6 +205,23 @@ def lda(dictio, dtm_train):
     
     return ldamod
 
+# Calculate document similarities based on TF-IDF
+def sim_baseline(tfidf_train, tfidf_ref):
+    print("Calculating similarity scores for the baseline TF-IDF model...")
+    
+    sim_scores = []
+    counter = 0
+    
+    for row in range(tfidf_train.shape[0]):
+        if tfidf_train[row].getnnz() > 0: # If the answer contains text
+            sim = 1 - spatial.distance.cosine(tfidf_train[row].toarray(), tfidf_ref.toarray()) 
+            sim_scores.append(sim) 
+        else:
+            sim_scores.append(0) 
+        counter += 1
+    
+    return sim_scores
+
 # Calculate document similarities with LDA model
 def sim_lda(ldamod, dtm_stu, dtm_ref):
     print("\nCalculating similarity scores for the LDA model...\n")
@@ -218,23 +235,6 @@ def sim_lda(ldamod, dtm_stu, dtm_ref):
             #print(ldamod[dtm_ref])
             #print(ldamod[answer])
             #print(sim)
-            sim_scores.append(sim) 
-        else:
-            sim_scores.append(0) 
-        counter += 1
-    
-    return sim_scores
-
-# Calculate document similarities based on TF-IDF
-def sim_baseline(tfidf_train, tfidf_ref):
-    print("Calculating similarity scores for the baseline TF-IDF model...")
-    
-    sim_scores = []
-    counter = 0
-    
-    for row in range(tfidf_train.shape[0]):
-        if tfidf_train[row].getnnz() > 0: # If the answer contains text
-            sim = 1 - spatial.distance.cosine(tfidf_train[row].toarray(), tfidf_ref.toarray()) 
             sim_scores.append(sim) 
         else:
             sim_scores.append(0) 
@@ -417,4 +417,88 @@ if __name__ == "__main__":
 
 
 
+
+# Get document-term matrix (raw counts)
+raw_counts_train = [dictio.doc2bow(text) for text in train['NoStops']]
+raw_counts_ref = [dictio.doc2bow(text) for text in ref['NoStops']][0]
+
+def cross_val_lsa(train, ref, dictio):
+    
+    # Get document-term matrix 
+    raw_counts_ref = [dictio.doc2bow(text) for text in ref['NoStops']][0]
+    
+    # Stratified 10-fold cross-validation (stratificiation is based on the real grades)
+    skf = sklearn.model_selection.StratifiedKFold(n_splits=2) # TO DO: What train-test split is used? (e.g. 80/20)
+    
+    # Get indices of columns in dataframe
+    index_NoStops = train.columns.get_loc("NoStops")
+    index_Grade = train.columns.get_loc("Grade")
+    
+    # Create empty list to store the correlations of the 10 folds
+    all_corrs = list()
+     
+    # Start 10-fold cross validation
+    for fold_id, (train_indexes, validation_indexes) in enumerate(skf.split(train, train.Grade)):
+        
+        # Print the fold number
+        print("\nFold %d" % (fold_id + 1), "\n")
+         
+        # Collect the data for this train/validation split
+        train_texts = [df.iloc[x, index_NoStops] for x in train_indexes]
+        train_grades = [df.iloc[x, index_Grade] for x in train_indexes]
+        val_texts = [df.iloc[x, index_NoStops] for x in validation_indexes]
+        val_grades = [df.iloc[x, index_Grade] for x in validation_indexes]
+        
+        # Get the document-term matrices (raw counts)
+        raw_counts_train = [dictio.doc2bow(text) for text in train_texts] # Student answers, train split        
+        raw_counts_val = [dictio.doc2bow(text) for text in val_texts] # Student answers, validation split
+        
+        # Train LDA model on train split
+        ldamod = lda(dictio, dtm_train) 
+
+        # Get similarity scores of validation answers to reference answer
+        # TO DO: similarity scores are unreasonably high (often around .99)
+        # As a result, only grades of 10 are predicted
+        sim_scores_lda = sim_lda(ldamod, dtm_val, dtm_ref)
+        
+        # Transform similarity scores into grades
+        # TO DO: use the training set to try out different mapping algorithms?
+        pred_grades = sim_to_grade(sim_scores_lda)
+        
+        # Evaluate
+        corr = evaluate(pred_grades, val_grades)
+        all_corrs.append(corr)
+          
+    # Average correlation over 10 folds
+    av_corr = sum(all_corrs) / len(all_corrs)
+    print("The average correlation over 10 folds is:", av_corr)
+
+
+# Raw counts
+lsamod = models.LsiModel(raw_counts_train[:200], id2word=dictio, num_topics=20, chunksize=1, distributed=False) 
+lsamod.print_topics(num_topics=20, num_words=5)
+
+lsamod[raw_counts_ref]
+
+print("\nCalculating similarity scores for the LSA model...\n")
+
+sim_scores = []
+counter = 0
+
+for index in range(200, len(raw_counts_train)):
+    if len(raw_counts_train[index]) > 0: # If the answer contains text
+        sim = gensim.matutils.cossim(lsamod[raw_counts_ref], lsamod[raw_counts_train[index]])
+        #print(ldamod[dtm_ref])
+        #print(ldamod[answer])
+        #print(sim)
+        sim_scores.append(sim) 
+    else:
+        sim_scores.append(0) 
+    counter += 1
+
+
+
+
+lsa_mod = models.LsiModel(tfidf_train, id2word=dictio, num_topics=20, chunksize=1, distributed=False) 
+lsa_mod.print_topics(num_topics=20, num_words=5)
 
