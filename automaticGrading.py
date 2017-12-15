@@ -15,8 +15,10 @@ from nltk.corpus import stopwords
 from nltk.tokenize import sent_tokenize
 from gensim import corpora, models
 from scipy.stats.stats import pearsonr
-from sklearn.model_selection import train_test_split
 import sklearn.model_selection
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
+
 import matplotlib.pyplot as plt
 from collections import Counter
 from ggplot import *
@@ -228,10 +230,14 @@ def sim_to_grade(sim_scores):
 # (10-fold cross-validation)
 def cross_val_lda(train, ref, dictio):
 
-    # Document-term matrix for reference answer
+    # Document-term matrix for reference answer --> raw counts
     dtm_ref = [dictio.doc2bow(text) for text in ref['NoStops']] # Reference answer
     dtm_ref = dtm_ref[0]
-
+    
+    # Document-term matrix for reference answer --> TF-IDF
+    
+    
+    
     # Stratified 10-fold cross-validation (stratificiation is based on the real grades)
     skf = sklearn.model_selection.StratifiedKFold(n_splits=2)
     
@@ -366,6 +372,7 @@ if __name__ == "__main__":
     #TO DO: implement tf-idf
     # https://gist.github.com/clemsos/7692685
     
+    #TO DO: implement LSA
     
     
 
