@@ -1505,7 +1505,7 @@ Punten: 6
 Antwoord: The Whorf’s language theory in general means that language influences the way we think. There are two variations of this theory. In the weak variation, language just influences us in the way we can express ourselves, so if we know more words, we can make refined discrimination and express ourselves in a more sophisticated way. The strong variation of the theory means that language limits our thoughts. The less words we know, the less we can think. More scientists believe in the weak variation because humans are not always capable of formulating thoughts and feelings in words.
 Tentamennummer: 130
 Subjectcode: 801
-Punten: 16
+Punten: 10
 Antwoord: Whorf’s language theory states that language defines the way we think. \n According to the strong variation, we cannot think outside the boundaries of our language. \n The weak variation, however, states that we can think in more sophisticated ways if our language contains the appropriate words and phrases. This is supported by the fact that we are able to think in ways that do not rely on lanugage, take, for instance, emotional thinking. Another argument for the weak variation is the example of Inuit language. \n It is often said that that language contains a lot of words for “snow”, allowing them to distinguish between sorts of snow Central Europeans are not able to distinguish. \n While it might be true that they have more words for snow, it does not necessarily mean they know more sorts of snow. \n They are, however, faster at recognising these different sorts of snow.
 Tentamennummer: 131
 Subjectcode: 560
