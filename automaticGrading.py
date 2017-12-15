@@ -15,9 +15,13 @@ from nltk.corpus import stopwords
 from nltk.tokenize import sent_tokenize
 from gensim import corpora, models
 from scipy.stats.stats import pearsonr
+from scipy.sparse import csr_matrix
+from scipy import spatial
 import sklearn.model_selection
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
+
+from matplotlib.pyplot import plot, draw, show
 
 import matplotlib.pyplot as plt
 from collections import Counter
@@ -27,7 +31,8 @@ from ggplot import *
 random.seed(2017)
 
 # Set working directory
-os.chdir("C:/Users/johan/Documents/GitHub/AutomaticGrading")
+#os.chdir("C:/Users/johan/Documents/GitHub/AutomaticGrading")
+os.chdir("C:/Users/U908153/Desktop/GitHub/AutomaticGrading")
 
 # Open file
 def open_file(file):
@@ -66,7 +71,7 @@ def preprocess(raw_text):
 
 # Rearrange the students' answers in a dataframe
 def create_df(text):
-    print("Creating data frame...")
+    print("Creating data frame for the student answers...")
     
     exam_numbers = []
     subject_codes = []
@@ -114,7 +119,7 @@ def add_ref(ref_answer, cols):
 
 # Create dataframe for other input texts
 def create_df_book(text):
-    print("Creating data frame...")
+    print("Creating data frame for the text book...")
     
     # Create dataframe
     df = pd.DataFrame({'Answer': text})
@@ -192,17 +197,17 @@ def split(df):
 
 # Generate LDA model
 def lda(dictio, dtm_train):
-    print("Training the LDA model...")
+    print("Training the LDA model...\n")
     
     ldamod = models.ldamodel.LdaModel(dtm_train, num_topics=6, id2word = dictio, passes = 20)
-    print("This is the LDA model:")
+    print("This is the LDA model:\n")
     print(ldamod.print_topics(num_topics=6, num_words=2))
     
     return ldamod
 
 # Calculate document similarities with LDA model
-def sim(ldamod, dtm_stu, dtm_ref):
-    print("Calculating similarity scores...")
+def sim_lda(ldamod, dtm_stu, dtm_ref):
+    print("\nCalculating similarity scores for the LDA model...\n")
     
     sim_scores = []
     counter = 0
@@ -210,6 +215,26 @@ def sim(ldamod, dtm_stu, dtm_ref):
     for answer in dtm_stu:
         if len(answer) > 0: # If the answer contains text
             sim = gensim.matutils.cossim(ldamod[dtm_ref], ldamod[answer])
+            #print(ldamod[dtm_ref])
+            #print(ldamod[answer])
+            #print(sim)
+            sim_scores.append(sim) 
+        else:
+            sim_scores.append(0) 
+        counter += 1
+    
+    return sim_scores
+
+# Calculate document similarities based on TF-IDF
+def sim_baseline(tfidf_train, tfidf_ref):
+    print("Calculating similarity scores for the baseline TF-IDF model...")
+    
+    sim_scores = []
+    counter = 0
+    
+    for row in range(tfidf_train.shape[0]):
+        if tfidf_train[row].getnnz() > 0: # If the answer contains text
+            sim = 1 - spatial.distance.cosine(tfidf_train[row].toarray(), tfidf_ref.toarray()) 
             sim_scores.append(sim) 
         else:
             sim_scores.append(0) 
@@ -219,31 +244,62 @@ def sim(ldamod, dtm_stu, dtm_ref):
 
 # Transform similarity scores into grades
 def sim_to_grade(sim_scores):
-    print("Transforming similarity scores into grades...")
+    print("Transforming similarity scores into grades...\n")
     
     # Multiply the similarity scores by 10
     pred_grades = [round(sim*10) for sim in sim_scores] 
 
     return pred_grades
 
+def tfidf(train, ref):
+    
+    # Temporarily merge 'train' and 'ref' into one dataframe
+    df_train_ref = train.append(ref)
+    
+    # Get document-term matrix (TF-IDF)    
+    tfidf_mod = TfidfVectorizer(analyzer='word', min_df = 0) # Set up model
+    strings = [" ".join(word) for word in df_train_ref['NoStops']] # Transform answers from a list of words to a string
+    tfidf = tfidf_mod.fit_transform(strings) # Get TF-IDF matrix                                   
+    tfidf_train = tfidf[:-1]
+    tfidf_ref = tfidf[-1]
+    
+    '''
+    print(tfidf_train)
+    tfidf_train.A # Shows array, same as tfidf_train.toarray()
+    tfidf_train.indices # 
+    tfidf_train.data
+    tfidf_train.indptr
+    '''
+    
+    return tfidf_train, tfidf_ref
+
+def evaluate(pred_grades, val_grades):
+    # Get correlation between predicted grades (validation set) and lecturer-assigned grades 
+    # TO DO: exclude empty answers from this calculation, as they improve the score without improving the algorithm
+    # (Empty answers are always scores as 0)
+    correl, sig = pearsonr(pred_grades, val_grades)
+    print("The correlation between the predicted and real grades is:", correl, "\n")
+    
+    # Plot the predicted grades and lecturer-assigned grades
+    df_grades = pd.DataFrame({'Predicted': pred_grades, 'Assigned': val_grades})
+    df_counts = df_grades.groupby(['Predicted', 'Assigned']).size().reset_index(name='Count')
+    df_counts.plot(kind='scatter', x='Predicted', y='Assigned', s=df_counts['Count'], xlim=[-0.3,10.3])
+    show()
+     
+    return correl
+
 # Training an LDA on the exam data, and using this model to predict grades on a validation set
 # (10-fold cross-validation)
 def cross_val_lda(train, ref, dictio):
 
-    # Document-term matrix for reference answer --> raw counts
-    dtm_ref = [dictio.doc2bow(text) for text in ref['NoStops']] # Reference answer
-    dtm_ref = dtm_ref[0]
-    
-    # Document-term matrix for reference answer --> TF-IDF
-    
-    
+    dtm_ref = [dictio.doc2bow(text) for text in ref['NoStops']][0]
     
     # Stratified 10-fold cross-validation (stratificiation is based on the real grades)
-    skf = sklearn.model_selection.StratifiedKFold(n_splits=2)
+    skf = sklearn.model_selection.StratifiedKFold(n_splits=2) # TO DO: What train-test split is used? (e.g. 80/20)
     
     # Get indices of columns in dataframe
-    index_NoStops = df.columns.get_loc("NoStops")
-    index_Grade = df.columns.get_loc("Grade")
+    index_NoStops = train.columns.get_loc("NoStops")
+    index_Grade = train.columns.get_loc("Grade")
     
     # Create empty list to store the correlations of the 10 folds
     all_corrs = list()
@@ -252,15 +308,15 @@ def cross_val_lda(train, ref, dictio):
     for fold_id, (train_indexes, validation_indexes) in enumerate(skf.split(train, train.Grade)):
         
         # Print the fold number
-        print("Fold %d" % (fold_id + 1), "\n")
-        
+        print("\nFold %d" % (fold_id + 1), "\n")
+         
         # Collect the data for this train/validation split
         train_texts = [df.iloc[x, index_NoStops] for x in train_indexes]
         train_grades = [df.iloc[x, index_Grade] for x in train_indexes]
         val_texts = [df.iloc[x, index_NoStops] for x in validation_indexes]
         val_grades = [df.iloc[x, index_Grade] for x in validation_indexes]
         
-        # Get the document-term matrices
+        # Get the document-term matrices (raw counts)
         dtm_train = [dictio.doc2bow(text) for text in train_texts] # Student answers, train split        
         dtm_val = [dictio.doc2bow(text) for text in val_texts] # Student answers, validation split
         
@@ -270,26 +326,16 @@ def cross_val_lda(train, ref, dictio):
         # Get similarity scores of validation answers to reference answer
         # TO DO: similarity scores are unreasonably high (often around .99)
         # As a result, only grades of 10 are predicted
-        sim_scores = sim(ldamod, dtm_val, dtm_ref)
-        print(sim_scores)
+        sim_scores_lda = sim_lda(ldamod, dtm_val, dtm_ref)
         
         # Transform similarity scores into grades
         # TO DO: use the training set to try out different mapping algorithms?
-        pred_grades = sim_to_grade(sim_scores)
+        pred_grades = sim_to_grade(sim_scores_lda)
         
-        # Get correlation between predicted grades (validation set) and lecturer-assigned grades 
-        # TO DO: exclude empty answers from this calculation, as they improve the score without improving the algorithm
-        # (Empty answers are always scores as 0)
-        correl, sig = pearsonr(pred_grades, val_grades)
-        all_corrs.append(correl)
-        
-        print("The correlation between the predicted and real grades is:", correl, "\n")
-        
-        # Plot the predicted grades and lecturer-assigned grades
-        df_grades = pd.DataFrame({'Predicted': pred_grades, 'Assigned': val_grades})
-        df_counts = df_grades.groupby(['Predicted', 'Assigned']).size().reset_index(name='Count')
-        df_counts.plot(kind='scatter', x='Predicted', y='Assigned', s=df_counts['Count'])
-       
+        # Evaluate
+        corr = evaluate(pred_grades, val_grades)
+        all_corrs.append(corr)
+          
     # Average correlation over 10 folds
     av_corr = sum(all_corrs) / len(all_corrs)
     print("The average correlation over 10 folds is:", av_corr)
@@ -302,7 +348,7 @@ def lda_book(df_book, train, ref):
         
         # Get the document-term matrix for the book       
         dictio_book = dictionary(df_book) # Create dictionary of vocabulary
-        dtm_book = [dictio.doc2bow(text) for text in book_texts] 
+        dtm_book = [dictio_book.doc2bow(text) for text in book_texts] 
         
         # Train LDA model
         ldamod_book = lda(dictio_book, dtm_book)
@@ -311,33 +357,24 @@ def lda_book(df_book, train, ref):
         dtm_train = [dictio_book.doc2bow(text) for text in train['NoStops']] # Student answers, train split
 
         # Document-term matrix for reference answer
-        dtm_ref = [dictio_book.doc2bow(text) for text in ref['NoStops']] # Reference answer
-        dtm_ref = dtm_ref[0]
-    
+        dtm_ref = [dictio_book.doc2bow(text) for text in ref['NoStops']][0] # Reference answer
+        
         # Get similarity scores of training answers to reference answer
         # TO DO: similarity scores are unreasonably high (often around .99)
         # As a result, only grades of 10 are predicted
-        sim_scores = sim(ldamod_book, dtm_train, dtm_ref)
-        print(sim_scores)
+        sim_scores_lda = sim_lda(ldamod_book, dtm_train, dtm_ref)
         
         # Transform similarity scores into grades
         # TO DO: use the training set to try out different mapping algorithms?
-        pred_grades = sim_to_grade(sim_scores)
+        pred_grades = sim_to_grade(sim_scores_lda)
         
         # Get assigned grades
         val_grades = list(train["Grade"])
         
         # Get correlation between predicted grades (validation set) and lecturer-assigned grades 
         # TO DO: exclude empty answers from this calculation, as they improve the score without improving the algorithm
-        # (Empty answers are always scores as 0)
-        correl, sig = pearsonr(pred_grades, val_grades) 
-        print("The correlation between the predicted and real grades is:", correl, "\n")
-        
-        # Plot the predicted grades and lecturer-assigned grades
-        df_grades = pd.DataFrame({'Predicted': pred_grades, 'Assigned': val_grades})
-        df_counts = df_grades.groupby(['Predicted', 'Assigned']).size().reset_index(name='Count')
-        df_counts.plot(kind='scatter', x='Predicted', y='Assigned', s=df_counts['Count'])  
-
+        # (Empty answers are always scored as 0)
+        evaluate(pred_grades, val_grades)
 
 # Run code
 if __name__ == "__main__":
@@ -352,29 +389,32 @@ if __name__ == "__main__":
     df = tok_lem(df) # Tokenize and lemmatize all answers, and remove stop words
     dictio = dictionary(df) # Create dictionary of vocabulary
     ref, train, test = split(df) # Split the data into a 80/20 (train/test)
+    tfidf_train, tfidf_ref = tfidf(train, ref) # Get TF-IDF document-term matrix
     
-    # Train an LDA model on the student data and predict grades
-    cross_val_lda(train, ref, dictio)
-       
     # Read and prepare Psychology book
     book_raw = open_file('psyBook.txt') # Open book
-    #book_test = book_raw[:50000]
+    book_raw = book_raw[:50000] # To try new things out without having to wait very long
     book = book_raw.replace("\n", " ") # Remove white lines
     book = book.replace(chr(0x00AD), "") # Remove soft hyphens
     book = preprocess(book) # Preprocess book
     sent_book = sent_tokenize(book) # Split into sentences
     df_book, cols_book = create_df_book(sent_book) # Create dataframe 
     df_book = tok_lem(df_book) # Tokenize, lemmatize, remove stop words
-    
-    # Train an LDA model on the book and predict grades  
+
+    # Baseline model
+    sim_scores_baseline = sim_baseline(tfidf_train, tfidf_ref)
+    pred_grades = sim_to_grade(sim_scores_baseline)
+    val_grades = list(train["Grade"])
+    evaluate(pred_grades, val_grades)
+        
+    # LDA model: train on student answers
+    cross_val_lda(train, ref, dictio)
+  
+    # LDA model: train on Psychology book
     lda_book(df_book, train, ref) 
     
-    #TO DO: implement tf-idf
-    # https://gist.github.com/clemsos/7692685
-    
-    #TO DO: implement LSA
-    
-    
+    # LSA model: train on Psychology book
+
 
 
 
