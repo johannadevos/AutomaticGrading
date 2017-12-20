@@ -21,6 +21,7 @@ import sklearn.model_selection
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
 from matplotlib.pyplot import plot, draw, show
+import re
 
 import matplotlib.pyplot as plt
 from collections import Counter
@@ -55,7 +56,7 @@ def preprocess(raw_text):
     text = text.replace("/n", "")
     text = text.replace("  ", " ")
     text = text.replace("\n\nTentamennummer", "\nTentamennummer")
-    
+     
     # Replace curly quotes
     text = text.replace(chr(0x2019), chr(0x0027)) # Replace right single curly quote with straight quote
     text = text.replace(chr(0x2018), chr(0x0027)) # Replace left single curly quote with straight quote
@@ -148,10 +149,17 @@ def tok_lem(df):
     for i in range(len(df)):
         answer = df['Answer'][i]
         
-        # Preprocess
+        # Preprocess     
         answer = answer.replace("'s", "") # Remove possessive 's
-        answer = answer.lower()
-                               
+        answer = answer.lower() # Make lowercase
+        answer = re.sub("\d+", "", answer) # Remove numbers
+ 
+        # Preprocess when using spelling-corrected data
+        answer = answer.replace("_abbreviation", "")
+        answer = answer.replace("_nonexistent", "")
+        answer = answer.replace("_dutch", "")
+        answer = answer.replace("_german", "")
+        
         # Tokenize
         #tok_answer = word_tokenize(answer)
         tok_answer = tokenizer.tokenize(answer) # also removes apostrophe
@@ -177,7 +185,6 @@ def tok_lem(df):
         
     return df
 
-# TO DO: remove numbers
 # TO DO: standardise British/American spelling?
 
 # Create dictionary of vocabulary
@@ -201,9 +208,9 @@ def split(df):
 def lda(dictio, dtm_train):
     print("Training the LDA model...\n")
     
-    ldamod = models.ldamodel.LdaModel(dtm_train, num_topics=6, id2word = dictio, passes = 20)
-    #print("This is the LDA model:\n")
-    #print(ldamod.print_topics(num_topics=6, num_words=2))
+    ldamod = models.ldamodel.LdaModel(dtm_train, num_topics=10, id2word = dictio, passes = 20)
+    print("This is the LDA model:\n")
+    print(ldamod.print_topics(num_topics=6, num_words=4))
     
     return ldamod
 
@@ -224,9 +231,9 @@ def sim_baseline(tfidf_train, tfidf_ref):
     sim_scores = []
     counter = 0
     
-    for row in range(tfidf_train.shape[0]):
-        if tfidf_train[row].getnnz() > 0: # If the answer contains text
-            sim = 1 - spatial.distance.cosine(tfidf_train[row].toarray(), tfidf_ref.toarray()) 
+    for row_index in range(tfidf_train.shape[0]):
+        if tfidf_train[row_index].getnnz() > 0: # If the answer contains text
+            sim = 1 - spatial.distance.cosine(tfidf_train[row_index].toarray(), tfidf_ref.toarray()) 
             sim_scores.append(sim) 
         else:
             sim_scores.append(0) 
@@ -248,7 +255,7 @@ def sim_topic_mod(model, dtm_train, dtm_ref):
         else:
             sim_scores.append(0)
         counter += 1
-    
+        
     return sim_scores
 
 # Transform similarity scores into grades
@@ -298,66 +305,75 @@ def evaluate(pred_grades, val_grades):
     return correl
 
 # Training a topic model on the student data, using k-fold cross-validation
-def topic_mod_cross_val(train, ref, tfidf_ref, dictio, topic_mod="LDA", counting="TF-IDF"):
+def topic_mod_cross_val(train, ref, tfidf_train, tfidf_ref, dictio, topic_mod="LSA", counting="TF-IDF"):
     
-    # Get document-term matrix for the reference answer (raw counts)
+    # Get document-term matrices
+    
+    # Raw counts
+    raw_counts_train = [dictio.doc2bow(text) for text in train['NoStops']]
     raw_counts_ref = [dictio.doc2bow(text) for text in ref['NoStops']][0]
-      
-    # Stratified 10-fold cross-validation (stratificiation is based on the real grades)
-    splits = 2
-    skf = sklearn.model_selection.StratifiedKFold(n_splits=splits) # TO DO: What train-test split is used? (e.g. 80/20)
+ 
+    # TF-IDF
+    tfidf_train_list = []
+    for row in tfidf_train:
+        t = zip(row.indices, row.data)
+        tfidf_train_list.append(list(t))
+        
+    tfidf_ref = list(zip(tfidf_ref.indices, tfidf_ref.data))
     
-    # Get indices of columns in dataframe
-    index_NoStops = train.columns.get_loc("NoStops")
+    # Stratified k-fold cross-validation (stratificiation is based on the real grades)
+    k = 2
+    skf = sklearn.model_selection.StratifiedKFold(n_splits=k) 
+    # TO DO: What train-test split is used? (e.g. 80/20)
+    
+    # Get index of Grade column in dataframe
     index_Grade = train.columns.get_loc("Grade")
     
-    # Create empty list to store the correlations of the 10 folds
+    # Create empty list to store the correlations of the k folds
     all_corrs = []
      
-    # Start 10-fold cross validation
-    for fold_id, (train_indexes, validation_indexes) in enumerate(skf.split(train, train.Grade)):
+    # Start k-fold cross validation
+    for fold_id, (train_indices, val_indices) in enumerate(skf.split(train, train.Grade)):
         
         # Print the fold number
         print("\nFold %d" % (fold_id + 1), "\n")
          
-        # Collect the data for this train/validation split
-        train_texts = [df.iloc[x, index_NoStops] for x in train_indexes]
-        train_grades = [df.iloc[x, index_Grade] for x in train_indexes]
-        val_texts = [df.iloc[x, index_NoStops] for x in validation_indexes]
-        val_grades = [df.iloc[x, index_Grade] for x in validation_indexes]
+        # Extract validation grades
+        val_grades = [train.iloc[x, index_Grade] for x in val_indices]
         
-        # Get the document-term matrices (raw counts)
-        raw_counts_train = [dictio.doc2bow(text) for text in train_texts] # Student answers, train split        
-        raw_counts_val = [dictio.doc2bow(text) for text in val_texts] # Student answers, validation split
-        
+        # Train topic models and calculate similarity scores between validation answers and reference answer
         if topic_mod == "LDA":
-            model = lda(dictio, raw_counts_train) 
             
+            # Extract training and validation samples from the document-term matrix (raw counts)
+            raw_counts_train_sample = [raw_counts_train[index] for index in train_indices]
+            raw_counts_val = [raw_counts_train[index] for index in val_indices]  
+            
+            model = lda(dictio, raw_counts_train_sample) 
+            sim_scores = sim_topic_mod(model, raw_counts_val, raw_counts_ref)
+            # TO DO: similarity scores are unreasonably high (often around .99)
+            # As a result, only grades of 10 are predicted
+
         elif topic_mod == "LSA":
             
             if counting == "raw":
-                model = lsa(dictio, raw_counts_train)
+                
+                # Extract training and validation samples from the document-term matrix (raw counts)
+                raw_counts_train_sample = [raw_counts_train[index] for index in train_indices]
+                raw_counts_val = [raw_counts_train[index] for index in val_indices]  
+                
+                model = lsa(dictio, raw_counts_train_sample)
+                sim_scores = sim_topic_mod(model, raw_counts_val, raw_counts_ref)
                 
             elif counting == "TF-IDF":
-            
-                # Get the document-term matrices (TF-IDF)
-                tfidf_mod = TfidfVectorizer(analyzer='word', min_df = 0) # Set up model
-                strings = [" ".join(word) for word in train_texts] # Transform answers from a list of words to a string
-                tfidf_train = tfidf_mod.fit_transform(strings) # Get TF-IDF matrix
-                
-                # Tranform TF-IDF matrix into list of tuples: (dictio index, TF-IDF score)
-                tfidf_tuples = []
-                
-                for row in tfidf_train:
-                    z = zip(row.indices, row.data)
-                    tfidf_tuples.append(list(z))
-                        
+                     
+                # Extract training and validation samples from the document-term matrix (TF_IDF)
+                tfidf_train_sample = [tfidf_train_list[index] for index in train_indices]
+                tfidf_val = [tfidf_train_list[index] for index in val_indices]
+                         
                 # Train LSA model 
-                model = lsa(dictio, tfidf_tuples) 
-
-        # Get similarity scores of validation answers to reference answer
-        sim_scores = sim_topic_mod(model, raw_counts_val, raw_counts_ref)
-        
+                model = lsa(dictio, tfidf_train_sample) 
+                sim_scores = sim_topic_mod(model, tfidf_val, tfidf_ref)
+                
         # Transform similarity scores into grades
         # TO DO: use the training set to try out different mapping algorithms?
         pred_grades = sim_to_grade(sim_scores)
@@ -368,52 +384,70 @@ def topic_mod_cross_val(train, ref, tfidf_ref, dictio, topic_mod="LDA", counting
           
     # Average correlation over 10 folds
     av_corr = sum(all_corrs) / len(all_corrs)
-    print("The average correlation over", splits, "folds is:", av_corr)
+    print("The average correlation over", k, "folds is:", av_corr)
+
+
+# TO DO: think about how to calculate tf-idf for the test set (use idf of training set)
+
 
 # Training an LDA on a psychology text book, and using this model to predict grades on the training set
-def lda_book(df_book, train, ref):
+def topic_mod_book(df_book, train, ref, tfidf_train, tfidf_ref, topic_mod="LSA", counting="TF-IDF"):
     
-        # Get a list of all sentences in the book
-        book_texts = list(df_book['NoStops'])
-        
-        # Get the document-term matrix for the book       
-        dictio_book = dictionary(df_book) # Create dictionary of vocabulary
-        raw_counts_book = [dictio_book.doc2bow(text) for text in book_texts] 
-        
-        # Train LDA model
-        ldamod_book = lda(dictio_book, raw_counts_book)
-
-        # Document-term matrix for student answers
-        raw_counts_train = [dictio_book.doc2bow(text) for text in train['NoStops']] # Student answers, train split
-
-        # Document-term matrix for reference answer
-        raw_counts_ref = [dictio_book.doc2bow(text) for text in ref['NoStops']][0] # Reference answer
-        
-        # Get similarity scores of training answers to reference answer
-        # TO DO: similarity scores are unreasonably high (often around .99)
-        # As a result, only grades of 10 are predicted
-        sim_scores_lda = sim_topic_mod(ldamod_book, raw_counts_train, raw_counts_ref)
-        
-        # Transform similarity scores into grades
-        # TO DO: use the training set to try out different mapping algorithms?
-        pred_grades = sim_to_grade(sim_scores_lda)
-        
-        # Get assigned grades
-        val_grades = list(train["Grade"])
-        
-        # Get correlation between predicted grades (validation set) and lecturer-assigned grades 
-        # TO DO: exclude empty answers from this calculation, as they improve the score without improving the algorithm
-        # (Empty answers are always scored as 0)
-        evaluate(pred_grades, val_grades)
-
+    # Get a list of all sentences in the book
+    book_texts = list(df_book['NoStops'])
     
+    # Get the document-term matrix for the book       
+    dictio_book = dictionary(df_book) # Create dictionary of vocabulary
+    raw_counts_book = [dictio_book.doc2bow(text) for text in book_texts] 
+    
+    # Document-term matrix for student answers and reference answer (raw counts)
+    raw_counts_train = [dictio_book.doc2bow(text) for text in train['NoStops']] # Student answers, train split
+    raw_counts_ref = [dictio_book.doc2bow(text) for text in ref['NoStops']][0] # Reference answer
+
+    if topic_mod == "LDA":        
+        model_book = lda(dictio_book, raw_counts_book)
+        sim_scores = sim_topic_mod(model_book, raw_counts_train, raw_counts_ref)
+  
+    elif topic_mod == "LSA":
+        
+        if counting == "raw":
+            model_book = lsa(dictio_book, raw_counts_book)
+            sim_scores = sim_topic_mod(model_book, raw_counts_train, raw_counts_ref)
+  
+        elif counting == "TF-IDF":
+
+            # Tranform TF-IDF matrix into list of tuples: (dictio index, TF-IDF score)
+            tfidf_book_list = []
+            
+            for row in tfidf_train:
+                t = zip(row.indices, row.data)
+                tfidf_book_list.append(list(t))
+                    
+            model_book = lsa(dictio, tfidf_book_list) 
+            sim_scores = sim_topic_mod(model_book, raw_counts_train, raw_counts_ref)
+            # TO DO: calculate sim_scores with tf_idf
+    
+    # Get similarity scores of training answers to reference answer
+    #sim_scores = sim_topic_mod(model_book, raw_counts_train, raw_counts_ref)
+    
+    # Transform similarity scores into grades
+    # TO DO: use the training set to try out different mapping algorithms?
+    pred_grades = sim_to_grade(sim_scores)
+    
+    # Get assigned grades
+    val_grades = list(train["Grade"])
+    
+    # Get correlation between predicted grades (validation set) and lecturer-assigned grades 
+    evaluate(pred_grades, val_grades)
+
+
 # Run code
 if __name__ == "__main__":
     
     # Read and prepare student data
     ref_answer_raw = open_file('referenceAnswer.txt') # Read reference answer
     ref_answer = preprocess(ref_answer_raw) # Preprocess reference answer
-    stud_answers_raw = open_file('studentAnswers.txt') # Read student answers
+    stud_answers_raw = open_file('studentAnswersCorrected.txt') # Read student answers
     stud_answers = preprocess(stud_answers_raw) # Preprocess student answers
     df, cols = create_df(stud_answers) # Create dataframe of student answers
     df = add_ref(ref_answer, cols) # Add reference answer to dataframe
@@ -439,26 +473,14 @@ if __name__ == "__main__":
     evaluate(pred_grades, val_grades)
         
     # LDA model: train on student answers
-    topic_mod_cross_val(train, ref, None, dictio, topic_mod="LDA")
+    topic_mod_cross_val(train, ref, tfidf_train, tfidf_ref, dictio, topic_mod="LDA")
   
     # LDA model: train on Psychology book
-    lda_book(df_book, train, ref) 
+    topic_mod_book(df_book, train, ref, None, None, topic_mod="LDA") 
     
     # LSA model: train on student answers
-    topic_mod_cross_val(train, ref, tfidf_ref, dictio, topic_mod="LSA", counting="TF-IDF")
+    topic_mod_cross_val(train, ref, tfidf_train, tfidf_ref, dictio, topic_mod="LSA", counting="TF-IDF")
     
-    # LSA model: train on Psychology book
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+   # LSA model: train on Psychology book
+    topic_mod_book(df_book, train, ref, tfidf_train, tfidf_ref, topic_mod="LSA", counting="TF-IDF") 
+    # TO DO: calculate sim_scores with tf_idf
