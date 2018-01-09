@@ -727,7 +727,7 @@ if __name__ == "__main__":
     df_book, cols_book = create_df_book(sent_book) # Create dataframe 
     df_book = tok_lem(df_book) # Tokenize, lemmatize, remove stop words
 
-    # Baseline model
+    # Baseline models
     scores_baseline = sim_baseline(train, ref, counting="binary") # Raw counts or binary counts
     pred_grades = sim_times_ten(scores_baseline)
     val_grades = list(train["Grade"])
@@ -751,16 +751,21 @@ if __name__ == "__main__":
     #topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="TF-IDF") # NOT WORKING
     
     # Running on the test data
-    
-    
+    real_grades = list(test['Grade'])
+        
     # Topic models trained on student data
     model, counts_test, counts_ref = topic_mod_students(df, dictio, topic_mod="LSA", counting="TF-IDF")
     sim_scores = sim_topic_mod(model, counts_test, counts_ref)
-             
-    # Transform similarity scores into grades
-    pred_grades = sim_times_ten(sim_scores)
-    real_grades = list(test['Grade'])
+    pred_grades = sim_times_ten(sim_scores) # Transform similarity scores into grades
+    evaluate(pred_grades, real_grades, model, "binary") # Evaluate
     
-    # Evaluate
-    evaluate(pred_grades, real_grades, model, "binary")
+    # Topic models trained on psychology book
     
+    # Baseline models (not trained)
+    scores_baseline = sim_baseline(test, ref, counting="binary") # Raw counts or binary counts
+    pred_grades = sim_times_ten(scores_baseline)
+    evaluate(pred_grades, real_grades, model="baseline", counting="binary")
+    
+    tfidf_scores_baseline = sim_baseline_tfidf(test, ref) # Counts based on TF-IDF
+    pred_grades = sim_times_ten(tfidf_scores_baseline)
+    evaluate(pred_grades, real_grades, model="baseline", counting="TF-IDF")
