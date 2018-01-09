@@ -204,7 +204,7 @@ def dictionary(df):
 
 # Create training, validation and test set
 def split(df):
-    print("Creating a training, validation and test set...")
+    print("Creating a training and test set...")
     
     ref = df[-1:]
     train, test = train_test_split(df[:-1], test_size = 0.2, random_state = 2017) # Split 80/20, pseudo-random number for reproducability
@@ -378,7 +378,7 @@ def sim_topic_mod(model, dtm_train, dtm_ref):
 def topic_mod_cross_val(train, ref, dictio, topic_mod="LSA", counting="TF-IDF"):
     
     # Get document-term matrices
-    counts_train, counts_ref = dtm(train, ref, counting)
+    counts_train, counts_ref = dtm(train, ref, None, None, counting, "student answers")
     
     # Stratified k-fold cross-validation (stratificiation is based on the real grades)
     k = 2
@@ -423,71 +423,32 @@ def topic_mod_cross_val(train, ref, dictio, topic_mod="LSA", counting="TF-IDF"):
     av_corr = sum(all_corrs) / len(all_corrs)
     print("\nThe average correlation over", k, "folds is:", av_corr)
 
+
+# For testing: training a topic model on all student data
+def topic_mod_students(df, dictio, topic_mod="LSA", counting="TF-IDF"):
+    
+    ref, train, test = split(df)
+    
+    # Get document-term matrices
+    counts_train, counts_ref, counts_test = dtm(train, ref, test, None, counting, "student answers")
+    
+    # Train topic models
+    if topic_mod == "LDA":
+        model = lda(dictio, counts_train) 
+    elif topic_mod == "LSA":
+        model = lsa(dictio, counts_train)
+
+    return model, counts_test, counts_ref
+
 # TO DO: think about how to calculate tf-idf for the test set (use idf of training set)
 
-'''
-# Training an LDA on a psychology text book, and using this model to predict grades on the training set
+
+# Training a topic model on a psychology text book, and using this model to predict grades on the training set
 def topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="TF-IDF"):
     
-    # Get a list of all sentences in the book
-    book_sents = list(df_book['NoStops'])
-    
-    # Raw counts
-    
-    # Get the document-term matrix for the book       
     dictio_book = dictionary(df_book) # Create dictionary of vocabulary
-    raw_counts_book = [dictio_book.doc2bow(text) for text in book_sents] 
-                          
-    # Get document-term matrices for the student answers
-    raw_counts_train = [dictio_book.doc2bow(text) for text in train['NoStops']]
-    raw_counts_ref = [dictio_book.doc2bow(text) for text in ref['NoStops']][0]
+    counts_train, counts_ref, counts_book = dtm(train, ref, test, df_book, counting, "book")
     
-    if counting == "raw":
-        counts_book = raw_counts_book
-        counts_train = raw_counts_train
-        counts_ref = raw_counts_ref   
-    
-    # Binary scores
-    elif counting == "binary":
-        counts_book = [] # Create empty list to contain the tuples with binary counts
-        for sentence in raw_counts_book: # Loop through tuples for each student
-            counts_book_sent = []
-            for tup in sentence:
-                new_tup = tup[0], 1 # Replace a count of any number greater than zero by 1
-                counts_book_sent.append(new_tup)
-            counts_book.append(counts_book_sent)
-        
-        counts_train = [] # Create empty list to contain the tuples with binary counts
-        for student in raw_counts_train: # Loop through tuples for each student
-            counts_train_stud = []
-            for tup in student:
-                new_tup = tup[0], 1 # Replace a count of any number greater than zero by 1
-                counts_train_stud.append(new_tup)
-            counts_train.append(counts_train_stud)
-        
-        counts_ref = []
-        for tup in raw_counts_ref:
-            new_tup = tup[0], 1
-            counts_ref.append(new_tup)
-    
-    # TF-IDF
-    elif counting == "TF-IDF":
-        tfidf_train, tfidf_ref, tfidf_book = tfidf_book2(train, ref, df_book)
-        
-        counts_book = []
-        counts_train = []
-        counts_ref = []
-            
-        for row in tfidf_train:
-            t = zip(row.indices, row.data)
-            counts_train.append(list(t))
-        
-        counts_ref = list(zip(tfidf_ref.indices, tfidf_ref.data))
-        
-        for row in tfidf_book:
-            s = zip(row.indices, row.data)
-            counts_book.append(list(s))
-       
     # Generate topic model and calculate similarity scores                  
     if topic_mod == "LDA":        
         model_book = lda(dictio_book, counts_book)
@@ -498,14 +459,14 @@ def topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="TF-IDF"):
     sim_scores = sim_topic_mod(model_book, counts_train, counts_ref)
     
     # Transform similarity scores into grades
-    pred_grades = sim_times_ten(sim_scores)
+    pred_grades = round_sim_to_ten(sim_scores)
     
     # Get assigned grades
     val_grades = list(train["Grade"])
     
     # Get correlation between predicted grades (validation set) and lecturer-assigned grades 
     evaluate(pred_grades, val_grades, topic_mod, counting)
-'''
+
 
 
 ### ------------------------------
@@ -513,19 +474,50 @@ def topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="TF-IDF"):
 ### ------------------------------
 
 # Get document-term matrices
-def dtm(train, ref, counting):
+def dtm(train, ref, test, df_book, counting, training_data):
+    
+    # Determine which dictionary to use, based on the data that are used
+    if training_data == "student answers":
+    
+        # Raw counts
+        raw_counts_train = [dictio.doc2bow(text) for text in train['NoStops']]
+        raw_counts_ref = [dictio.doc2bow(text) for text in ref['NoStops']][0]
+        
+        if test is not None:
+            raw_counts_test = [dictio.doc2bow(text) for text in test['NoStops']]
+        
+    elif training_data == "book":
+        
+        # Get a list of all sentences in the book
+        book_sents = list(df_book['NoStops'])
+        
+        # Raw counts
+        
+        # Get the document-term matrix for the book       
+        dictio_book = dictionary(df_book) # Create dictionary of vocabulary
+        raw_counts_book = [dictio_book.doc2bow(text) for text in book_sents] 
+                              
+        # Get document-term matrices for the student answers
+        raw_counts_train = [dictio_book.doc2bow(text) for text in train['NoStops']]
+        raw_counts_ref = [dictio_book.doc2bow(text) for text in ref['NoStops']][0]    
+        
+    # Get the counts, depending on the counting method
     
     # Raw counts
-    raw_counts_train = [dictio.doc2bow(text) for text in train['NoStops']]
-    raw_counts_ref = [dictio.doc2bow(text) for text in ref['NoStops']][0]
-        
     if counting == "raw":
         counts_train = raw_counts_train
-        counts_ref = raw_counts_ref   
+        counts_ref = raw_counts_ref
+        
+        if test is not None:
+            counts_test = raw_counts_test
+        
+        if training_data == "book":
+            counts_book = raw_counts_book
     
     # Binary scores
     elif counting == "binary":
         counts_train = [] # Create empty list to contain the tuples with binary counts
+        
         for student in raw_counts_train: # Loop through tuples for each student
             counts_train_stud = []
             for tup in student:
@@ -537,18 +529,65 @@ def dtm(train, ref, counting):
         for tup in raw_counts_ref:
             new_tup = tup[0], 1
             counts_ref.append(new_tup)
+            
+        if test is not None:
+           counts_test = [] # Create empty list to contain the tuples with binary counts
+        
+           for student in raw_counts_test: # Loop through tuples for each student
+                counts_test_stud = []
+                for tup in student:
+                    new_tup = tup[0], 1 # Replace a count of any number greater than zero by 1
+                    counts_test_stud.append(new_tup)
+                counts_test.append(counts_test_stud) 
+            
+        if training_data == "book":
+            counts_book = [] # Create empty list to contain the tuples with binary counts
+            for sentence in raw_counts_book: # Loop through tuples for each student
+                counts_book_sent = []
+                for tup in sentence:
+                    new_tup = tup[0], 1 # Replace a count of any number greater than zero by 1
+                    counts_book_sent.append(new_tup)
+                counts_book.append(counts_book_sent)
                   
     # TF-IDF
     elif counting == "TF-IDF":
-        tfidf_train, tfidf_ref = tfidf(train, ref)
+        
+        if training_data == "student answers":
+            if test is None:
+                tfidf_train, tfidf_ref = tfidf(train, ref)
+            elif test is not None:
+                tfidf_train, tfidf_test, tfidf_ref = tfidf_test2(train, test, ref)
+                
+        elif training_data == "book":
+             tfidf_train, tfidf_ref, tfidf_book = tfidf_book2(train, ref, df_book)
+        
         counts_train = []
         for row in tfidf_train:
             t = zip(row.indices, row.data)
             counts_train.append(list(t))
             
         counts_ref = list(zip(tfidf_ref.indices, tfidf_ref.data))
+        
+        if test is not None:
+            counts_test = []
+            for row in tfidf_test:
+                t = zip(row.indices, row.data)
+                counts_test.append(list(t))
+            
+        if training_data == "book":
+            counts_book = []       
+            for row in tfidf_book:
+                s = zip(row.indices, row.data)
+                counts_book.append(list(s))
 
-    return counts_train, counts_ref
+    if training_data == "student answers":
+        if test is None:
+            return counts_train, counts_ref
+        elif test is not None:
+            return counts_train, counts_ref, counts_test    
+    elif training_data == "book":
+        return counts_train, counts_ref, counts_book
+
 
 # Calculate the document-term matrix based on TF-IDF
 def tfidf(train, ref):
@@ -572,6 +611,26 @@ def tfidf(train, ref):
     '''
     
     return tfidf_train, tfidf_ref
+
+
+# Calculate the document-term matrix based on TF-IDF
+def tfidf_test2(train, test, ref):
+    
+    # Temporarily merge 'train' and 'ref' into one dataframe
+    df_train_test = train.append(test)
+    df_train_test_ref = df_train_test.append(ref)
+    df_tfidf = df_train_test_ref
+    
+    # Get document-term matrix (TF-IDF)    
+    tfidf_mod = TfidfVectorizer(analyzer='word', min_df = 0) # Set up model
+    strings = [" ".join(word) for word in df_tfidf['NoStops']] # Transform answers from a list of words to a string
+    tfidf = tfidf_mod.fit_transform(strings) # Get TF-IDF matrix                                   
+    tfidf_train = tfidf[:len(train)]
+    tfidf_test = tfidf[len(train):len(train)+len(test)]
+    tfidf_ref = tfidf[-1]
+        
+    return tfidf_train, tfidf_test, tfidf_ref
+
 
 # TF-IDF for the book
 def tfidf_book2(train, ref, df_book):
@@ -660,7 +719,7 @@ if __name__ == "__main__":
     
     # Read and prepare Psychology book
     book_raw = open_file('psyBook.txt') # Open book
-    book_raw = book_raw[:5000] # To try new things out without having to wait very long
+    book_raw = book_raw[:50000] # To try new things out without having to wait very long
     book = book_raw.replace("\n", " ") # Remove white lines
     book = book.replace(chr(0x00AD), "") # Remove soft hyphens
     book = preprocess(book) # Preprocess book
@@ -682,11 +741,26 @@ if __name__ == "__main__":
     # Topic models: train on student answers
     # Two topic models to choose from: "LDA" and "LSA"
     # Three counting methods to choose from: "raw", "binary", and "TF-IDF" (the latter only for LSA)
-    topic_mod_cross_val(train, ref, dictio, topic_mod="LDA", counting="raw")
+    #topic_mod_cross_val(train, ref, dictio, topic_mod="LDA", counting="raw")
     topic_mod_cross_val(train, ref, dictio, topic_mod="LSA", counting="TF-IDF")
  
     # Topic models: train on Psychology book
     # Topic models and counting methods as above
-    #topic_mod_book(df_book, train, ref, topic_mod="LDA", counting="raw") 
-    #topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="binary") 
+    topic_mod_book(df_book, train, ref, topic_mod="LDA", counting="raw") 
+    #topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="raw") 
     #topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="TF-IDF") # NOT WORKING
+    
+    # Running on the test data
+    
+    
+    # Topic models trained on student data
+    model, counts_test, counts_ref = topic_mod_students(df, dictio, topic_mod="LSA", counting="TF-IDF")
+    sim_scores = sim_topic_mod(model, counts_test, counts_ref)
+             
+    # Transform similarity scores into grades
+    pred_grades = sim_times_ten(sim_scores)
+    real_grades = list(test['Grade'])
+    
+    # Evaluate
+    evaluate(pred_grades, real_grades, model, "binary")
+    
