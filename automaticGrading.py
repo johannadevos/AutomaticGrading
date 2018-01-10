@@ -32,8 +32,8 @@ from statistics import mode
 random.seed(2017)
 
 # Set working directory
-#os.chdir("C:/Users/johan/Documents/GitHub/AutomaticGrading")
-os.chdir("C:/Users/U908153/Desktop/GitHub/AutomaticGrading")
+os.chdir("C:/Users/johan/Documents/GitHub/AutomaticGrading")
+#os.chdir("C:/Users/U908153/Desktop/GitHub/AutomaticGrading")
 
 
 ### ------------------
@@ -321,7 +321,7 @@ def sim_baseline(train, ref, counting):
 def sim_baseline_tfidf(train, ref):
     print("\nCalculating similarity scores for the baseline TF-IDF model...")
     
-    tfidf_train, tfidf_ref = tfidf(train, ref)
+    tfidf_train, tfidf_ref = tfidf(train, ref, test = None, book = None)
     
     sim_scores = []
     
@@ -375,7 +375,7 @@ def sim_topic_mod(model, dtm_train, dtm_ref):
     return sim_scores
 
 # For development: training a topic model on the student data with k-fold cross-validation
-def topic_mod_cross_val(train, ref, dictio, topic_mod="LSA", counting="TF-IDF"):
+def topic_mod_students_cross_val(train, ref, dictio, topic_mod="LSA", counting="TF-IDF"):
     
     # Get document-term matrices
     counts_train, counts_ref = dtm(train, ref, None, None, counting, "student answers")
@@ -389,6 +389,8 @@ def topic_mod_cross_val(train, ref, dictio, topic_mod="LSA", counting="TF-IDF"):
     
     # Create empty list to store the correlations of the k folds
     all_corrs = []
+    all_av_diff = []
+    all_sse = []
      
     # Start k-fold cross validation
     for fold_id, (train_indices, val_indices) in enumerate(skf.split(train, train.Grade)):
@@ -397,7 +399,7 @@ def topic_mod_cross_val(train, ref, dictio, topic_mod="LSA", counting="TF-IDF"):
         print("\nFold %d" % (fold_id + 1), "\n")
          
         # Extract validation grades
-        val_grades = [train.iloc[x, index_Grade] for x in val_indices]
+        real_grades_val = [train.iloc[x, index_Grade] for x in val_indices]
         
         # Extract training and validation samples from the document-term matrix
         counts_train_fold = [counts_train[index] for index in train_indices]
@@ -413,16 +415,22 @@ def topic_mod_cross_val(train, ref, dictio, topic_mod="LSA", counting="TF-IDF"):
         sim_scores = sim_topic_mod(model, counts_val_fold, counts_ref)
              
         # Transform similarity scores into grades
-        pred_grades = round_sim_to_ten(sim_scores)
+        pred_grades = sim_times_ten(sim_scores)
         
         # Evaluate
-        corr = evaluate(pred_grades, val_grades, topic_mod, counting)
-        all_corrs.append(corr)
+        correl, av_diff, sse = evaluate(pred_grades, real_grades_val, topic_mod, counting)
+        all_corrs.append(correl)
+        all_av_diff.append(av_diff)
+        all_sse.append(sse)
           
     # Average correlation over 10 folds
-    av_corr = sum(all_corrs) / len(all_corrs)
-    print("\nThe average correlation over", k, "folds is:", av_corr)
-
+    av_correl = sum(all_corrs) / len(all_corrs)
+    av_diff = sum(all_av_diff) / len(all_av_diff)
+    av_sse = sum(all_sse) / len(all_sse)
+    print("\nThe average correlation over", k, "folds is:", av_correl)
+    print("The average difference between the real and predicted grades is:", av_diff)
+    print("The average SSE is:", av_sse, "\n")
+    
 
 # For testing: training a topic model on all student data
 def topic_mod_students(df, dictio, topic_mod="LSA", counting="TF-IDF"):
@@ -440,14 +448,12 @@ def topic_mod_students(df, dictio, topic_mod="LSA", counting="TF-IDF"):
 
     return model, counts_test, counts_ref
 
-# TO DO: think about how to calculate tf-idf for the test set (use idf of training set)
-
 
 # Training a topic model on a psychology text book, and using this model to predict grades on the training set
 def topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="TF-IDF"):
     
     dictio_book = dictionary(df_book) # Create dictionary of vocabulary
-    counts_train, counts_ref, counts_book = dtm(train, ref, test, df_book, counting, "book")
+    counts_train, counts_ref, counts_book = dtm(train, ref, None, df_book, counting, training_data = "book")
     
     # Generate topic model and calculate similarity scores                  
     if topic_mod == "LDA":        
@@ -459,14 +465,15 @@ def topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="TF-IDF"):
     sim_scores = sim_topic_mod(model_book, counts_train, counts_ref)
     
     # Transform similarity scores into grades
-    pred_grades = round_sim_to_ten(sim_scores)
+    pred_grades = sim_times_ten(sim_scores)
     
     # Get assigned grades
-    val_grades = list(train["Grade"])
+    real_grades = list(train["Grade"])
     
     # Get correlation between predicted grades (validation set) and lecturer-assigned grades 
-    evaluate(pred_grades, val_grades, topic_mod, counting)
-
+    evaluate(pred_grades, real_grades, topic_mod, counting)
+    
+    return topic_mod_book
 
 
 ### ------------------------------
@@ -501,6 +508,9 @@ def dtm(train, ref, test, df_book, counting, training_data):
         raw_counts_train = [dictio_book.doc2bow(text) for text in train['NoStops']]
         raw_counts_ref = [dictio_book.doc2bow(text) for text in ref['NoStops']][0]    
         
+        if test is not None:
+            raw_counts_test = [dictio_book.doc2bow(text) for text in test['NoStops']]
+            
     # Get the counts, depending on the counting method
     
     # Raw counts
@@ -529,7 +539,8 @@ def dtm(train, ref, test, df_book, counting, training_data):
         for tup in raw_counts_ref:
             new_tup = tup[0], 1
             counts_ref.append(new_tup)
-            
+        
+        # In case test data are used
         if test is not None:
            counts_test = [] # Create empty list to contain the tuples with binary counts
         
@@ -540,6 +551,7 @@ def dtm(train, ref, test, df_book, counting, training_data):
                     counts_test_stud.append(new_tup)
                 counts_test.append(counts_test_stud) 
             
+        # If data from the psychology book are used
         if training_data == "book":
             counts_book = [] # Create empty list to contain the tuples with binary counts
             for sentence in raw_counts_book: # Loop through tuples for each student
@@ -554,12 +566,12 @@ def dtm(train, ref, test, df_book, counting, training_data):
         
         if training_data == "student answers":
             if test is None:
-                tfidf_train, tfidf_ref = tfidf(train, ref)
+                tfidf_train, tfidf_ref = tfidf(train, ref, test = None, book = None)
             elif test is not None:
-                tfidf_train, tfidf_test, tfidf_ref = tfidf_test2(train, test, ref)
+                tfidf_train, tfidf_ref, tfidf_test = tfidf(train, ref, test, book = None)
                 
         elif training_data == "book":
-             tfidf_train, tfidf_ref, tfidf_book = tfidf_book2(train, ref, df_book)
+             tfidf_train, tfidf_ref, tfidf_book = tfidf(train, ref, test = None, book = df_book)
         
         counts_train = []
         for row in tfidf_train:
@@ -590,64 +602,52 @@ def dtm(train, ref, test, df_book, counting, training_data):
 
 
 # Calculate the document-term matrix based on TF-IDF
-def tfidf(train, ref):
+def tfidf(train, ref, test, book):
     
     # Temporarily merge 'train' and 'ref' into one dataframe
-    df_train_ref = train.append(ref)
+    df_tfidf = ref.append(train)  
     
-    # Get document-term matrix (TF-IDF)    
-    tfidf_mod = TfidfVectorizer(analyzer='word', min_df = 0) # Set up model
-    strings = [" ".join(word) for word in df_train_ref['NoStops']] # Transform answers from a list of words to a string
-    tfidf = tfidf_mod.fit_transform(strings) # Get TF-IDF matrix                                   
-    tfidf_train = tfidf[:-1]
-    tfidf_ref = tfidf[-1]
-    
-    '''
-    print(tfidf_train)
-    tfidf_train.A # Shows array, same as tfidf_train.toarray()
-    tfidf_train.indices # 
-    tfidf_train.data
-    tfidf_train.indptr
-    '''
-    
-    return tfidf_train, tfidf_ref
+    if test is None:
+        len_test = 0    
+    elif test is not None:
+        df_tfidf = df_tfidf.append(test)
+        
+    if book is None:
+        len_book = 0
+    elif book is not None:
+        df_tfidf = df_tfidf.append(book)
 
-
-# Calculate the document-term matrix based on TF-IDF
-def tfidf_test2(train, test, ref):
-    
-    # Temporarily merge 'train' and 'ref' into one dataframe
-    df_train_test = train.append(test)
-    df_train_test_ref = df_train_test.append(ref)
-    df_tfidf = df_train_test_ref
-    
     # Get document-term matrix (TF-IDF)    
     tfidf_mod = TfidfVectorizer(analyzer='word', min_df = 0) # Set up model
     strings = [" ".join(word) for word in df_tfidf['NoStops']] # Transform answers from a list of words to a string
-    tfidf = tfidf_mod.fit_transform(strings) # Get TF-IDF matrix                                   
-    tfidf_train = tfidf[:len(train)]
-    tfidf_test = tfidf[len(train):len(train)+len(test)]
-    tfidf_ref = tfidf[-1]
-        
-    return tfidf_train, tfidf_test, tfidf_ref
-
-
-# TF-IDF for the book
-def tfidf_book2(train, ref, df_book):
+    tfidf = tfidf_mod.fit_transform(strings) # Get TF-IDF matrix   
+                                
+    tfidf_ref = tfidf[0]
+    tfidf_train = tfidf[1:1+len(train)]
     
-    # Temporarily merge 'train' and 'ref' into one dataframe
-    df_train_ref = train.append(ref)
-    df_train_ref_book = df_train_ref.append(df_book)
+    if test is None and book is None:
+        return tfidf_train, tfidf_ref    
     
-    # Get document-term matrix (TF-IDF)    
-    tfidf_mod = TfidfVectorizer(analyzer='word', min_df = 0) # Set up model
-    strings = [" ".join(word) for word in df_train_ref_book['NoStops']] # Transform answers from a list of words to a string
-    tfidf = tfidf_mod.fit_transform(strings) # Get TF-IDF matrix                                   
-    tfidf_train = tfidf[:len(train)]
-    tfidf_ref = tfidf[len(train)]
-    tfidf_book = tfidf[len(train)+1:]
-        
-    return tfidf_train, tfidf_ref, tfidf_book
+    if test is not None and book is None:
+        tfidf_test = tfidf[1+len(train):]
+        return tfidf_train, tfidf_ref, tfidf_test
+    
+    if test is None and book is not None:
+        tfidf_book = tfidf[-len(book):]
+        return tfidf_train, tfidf_ref, tfidf_book
+    
+    elif test is not None and book is not None:
+        tfidf_test = tfidf[1+len(train):1+len(train)+len(test)]
+        tfidf_book = tfidf[-len(book):]
+        return tfidf_train, tfidf_ref, tfidf_test, tfidf_book
+               
+'''
+print(tfidf_train)
+tfidf_train.A # Shows array, same as tfidf_train.toarray()
+tfidf_train.indices # 
+tfidf_train.data
+tfidf_train.indptr
+'''
 
 # Try out different algorithms for transforming similarity scores into grades
 def sim_times_ten(sim_scores):
@@ -676,27 +676,31 @@ def round_sim_to_ten(sim_scores):
     return pred_grades2
 
 # Get evaluation measures: correlation, averages, SSE
-def evaluate(pred_grades, val_grades, model, counting):
-    correl, sig = pearsonr(pred_grades, val_grades)
+def evaluate(pred_grades, real_grades, model, counting):
+    correl, sig = pearsonr(pred_grades, real_grades)
     print("For the", model, "model with", counting, "counting, the correlation between the predicted and real grades is:", correl, "\n")
           
     # Plot the predicted grades and lecturer-assigned grades
-    df_grades = pd.DataFrame({'Predicted': pred_grades, 'Assigned': val_grades})
+    df_grades = pd.DataFrame({'Predicted': pred_grades, 'Assigned': real_grades})
     df_counts = df_grades.groupby(['Predicted', 'Assigned']).size().reset_index(name='Count')
     df_counts.plot(kind='scatter', x='Predicted', y='Assigned', s=df_counts['Count'], xlim=[-0.3,10.3])
     show()
     
     # Average scores
-    print("The average score of the real grades is:", np.average(val_grades))
-    print("The average score of the predicted grades is:", np.average(pred_grades))
+    av_real_grades = np.average(real_grades)
+    av_pred_grades = np.average(pred_grades)
+    av_diff = av_real_grades - av_pred_grades
+    print("The average score of the real grades is:", av_real_grades)
+    print("The average score of the predicted grades is:", av_pred_grades)
+    print("The difference is:", av_diff)
     
     # Sum of squared errors        
-    squared_errors = [(pred_grades[x] - val_grades[x])**2 for x in range(len(pred_grades))]
+    squared_errors = [(pred_grades[x] - real_grades[x])**2 for x in range(len(pred_grades))]
     sse = sum(squared_errors)
     
     print("\nThe sum of the squared errors is:", sse) 
         
-    return correl
+    return correl, av_diff, sse
         
 
 ### --------
@@ -730,36 +734,42 @@ if __name__ == "__main__":
     # Baseline models
     scores_baseline = sim_baseline(train, ref, counting="binary") # Raw counts or binary counts
     pred_grades = sim_times_ten(scores_baseline)
-    val_grades = list(train["Grade"])
-    evaluate(pred_grades, val_grades, model="baseline", counting="binary")
+    real_grades = list(train["Grade"])
+    evaluate(pred_grades, real_grades, model="baseline", counting="binary")
     
     tfidf_scores_baseline = sim_baseline_tfidf(train, ref) # Counts based on TF-IDF
     pred_grades = sim_times_ten(tfidf_scores_baseline)
-    val_grades = list(train["Grade"])
-    evaluate(pred_grades, val_grades, model="baseline", counting="TF-IDF")
+    real_grades = list(train["Grade"])
+    evaluate(pred_grades, real_grades, model="baseline", counting="TF-IDF")
         
     # Topic models: train on student answers
     # Two topic models to choose from: "LDA" and "LSA"
     # Three counting methods to choose from: "raw", "binary", and "TF-IDF" (the latter only for LSA)
-    #topic_mod_cross_val(train, ref, dictio, topic_mod="LDA", counting="raw")
-    topic_mod_cross_val(train, ref, dictio, topic_mod="LSA", counting="TF-IDF")
+    topic_mod_students_cross_val(train, ref, dictio, topic_mod="LDA", counting="raw")
+    topic_mod_students_cross_val(train, ref, dictio, topic_mod="LDA", counting="binary")
+    topic_mod_students_cross_val(train, ref, dictio, topic_mod="LSA", counting="raw")
+    topic_mod_students_cross_val(train, ref, dictio, topic_mod="LSA", counting="binary")
+    topic_mod_students_cross_val(train, ref, dictio, topic_mod="LSA", counting="TF-IDF")
  
     # Topic models: train on Psychology book
     # Topic models and counting methods as above
-    topic_mod_book(df_book, train, ref, topic_mod="LDA", counting="raw") 
-    #topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="raw") 
-    #topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="TF-IDF") # NOT WORKING
+    lda_book_raw = topic_mod_book(df_book, train, ref, topic_mod="LDA", counting="raw") 
+    lda_book_binary = topic_mod_book(df_book, train, ref, topic_mod="LDA", counting="binary") 
+    lsa_book_raw = topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="raw") 
+    lsa_book_binary = topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="binary") 
+    ###lsa_book_tfidf = topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="TF-IDF") # NOT WORKING
     
     # Running on the test data
     real_grades = list(test['Grade'])
         
-    # Topic models trained on student data
-    model, counts_test, counts_ref = topic_mod_students(df, dictio, topic_mod="LSA", counting="TF-IDF")
-    sim_scores = sim_topic_mod(model, counts_test, counts_ref)
+    # Topic models that are trained on student data
+    model, counts_test, counts_ref = topic_mod_students(df, dictio, topic_mod="LSA", counting="TF-IDF") # Train model on all student data (rather than a training subset)
+    sim_scores = sim_topic_mod(model, counts_test, counts_ref) # Get similarity scores
     pred_grades = sim_times_ten(sim_scores) # Transform similarity scores into grades
     evaluate(pred_grades, real_grades, model, "binary") # Evaluate
     
-    # Topic models trained on psychology book
+    # Topic models that are trained on psychology book
+    ## HIER VERDERGAAN
     
     # Baseline models (not trained)
     scores_baseline = sim_baseline(test, ref, counting="binary") # Raw counts or binary counts
