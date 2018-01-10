@@ -49,6 +49,7 @@ def open_file(file):
         
         return raw_text
 
+
 # Preprocess text
 def preprocess(raw_text):
     print("Preprocessing raw text...")
@@ -74,6 +75,7 @@ def preprocess(raw_text):
     text = text.replace("n't", " not")
     
     return text
+
 
 # Rearrange the students' answers in a dataframe
 def create_df(text):
@@ -116,12 +118,14 @@ def create_df(text):
 
     return df, cols
 
+
 # Add reference answer to dataframe
 def add_ref(ref_answer, cols):
     print("Adding reference answer...")
     ref = pd.Series(["Ref","Ref","Ref",ref_answer_raw,"","",""], index = cols)
     df_ref = df.append(ref, ignore_index = True)
     return df_ref   
+
 
 # Create dataframe for the textbook
 def create_df_book(text):
@@ -140,6 +144,7 @@ def create_df_book(text):
     df = df[cols]    
     
     return df, cols
+
 
 # Tokenize, lemmatize, and remove stop words
 def tok_lem(df):
@@ -193,6 +198,7 @@ def tok_lem(df):
 
 # TO DO: standardise British/American spelling?
 
+
 # Create dictionary of vocabulary
 def dictionary(df):
     print("Creating a dictionary...")
@@ -202,6 +208,7 @@ def dictionary(df):
     
     return dictionary
 
+
 # Create training, validation and test set
 def split(df):
     print("Creating a training and test set...")
@@ -209,6 +216,7 @@ def split(df):
     ref = df[-1:]
     train, test = train_test_split(df[:-1], test_size = 0.2, random_state = 2017) # Split 80/20, pseudo-random number for reproducability
     return ref, train, test
+
 
 # Explore the data
 def histogram(train):
@@ -223,7 +231,6 @@ def histogram(train):
     ax.set_ylabel('Counts')
     ax.set_xticks(range(0,11,1))
     ax.set_title('Histogram of grades')
-    
     
     
 ### ----------------
@@ -244,6 +251,7 @@ def baseline_most_common(train):
     sse = sum(squared_errors)
     
     print("\nThe sum of the squared errors is:", sse) 
+
 
 # Get cosine similarity between student answers and reference answer based on raw counts
 def sim_baseline(train, ref, counting):
@@ -314,8 +322,6 @@ def sim_baseline(train, ref, counting):
 
     return sim_scores
 
-# Calculate document similarities based on TF-IDF
-#def sim_baseline_binary():
 
 # Calculate document similarities based on TF-IDF
 def sim_baseline_tfidf(train, ref):
@@ -349,6 +355,7 @@ def lda(dictio, dtm_train):
     
     return ldamod
 
+
 # Generate LSA model
 def lsa(dictio, dtm_train):
     print("Training the LSA model...\n")
@@ -358,6 +365,7 @@ def lsa(dictio, dtm_train):
     #print(lsamod.print_topics(num_topics=20, num_words=5))
     
     return lsamod
+
 
 # Calculate document similarities with a topic model
 def sim_topic_mod(model, dtm_train, dtm_ref):
@@ -373,6 +381,7 @@ def sim_topic_mod(model, dtm_train, dtm_ref):
             sim_scores.append(0)
         
     return sim_scores
+
 
 # For development: training a topic model on the student data with k-fold cross-validation
 def topic_mod_students_cross_val(train, ref, dictio, topic_mod="LSA", counting="TF-IDF"):
@@ -431,7 +440,7 @@ def topic_mod_students_cross_val(train, ref, dictio, topic_mod="LSA", counting="
     print("The average difference between the real and predicted grades is:", av_diff)
     print("The average SSE is:", av_sse, "\n")
     
-
+    
 # For testing: training a topic model on all student data
 def topic_mod_students(df, dictio, topic_mod="LSA", counting="TF-IDF"):
     
@@ -658,6 +667,7 @@ def sim_times_ten(sim_scores):
 
     return pred_grades
 
+
 def round_sim_to_ten(sim_scores):
                     
     # Multiply the similarity scores by 10
@@ -674,6 +684,7 @@ def round_sim_to_ten(sim_scores):
         pred_grades2.append(grade)
        
     return pred_grades2
+
 
 # Get evaluation measures: correlation, averages, SSE
 def evaluate(pred_grades, real_grades, model, counting):
