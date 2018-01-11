@@ -766,15 +766,18 @@ if __name__ == "__main__":
     df_book, cols_book = create_df_book(sent_book) # Create dataframe 
     df_book = tok_lem(df_book) # Tokenize, lemmatize, remove stop words
  
+    # Running on the test data
+    print("\nRunning on the training data\n")
+    
     # Baseline models
     scores_baseline = sim_baseline(train, ref, counting="raw")
-    apply_baseline(scores_baseline, train, ref, counting="raw")
+    #apply_baseline(scores_baseline, train, ref, counting="raw")
     
-    scores_baseline = sim_baseline(train, ref, counting="binary") # Raw counts or binary counts
-    apply_baseline(scores_baseline, train, ref, counting="binary")
+    scores_baseline = sim_baseline(train, ref, counting="binary")
+    #apply_baseline(scores_baseline, train, ref, counting="binary")
  
-    scores_baseline = sim_baseline_tfidf(train, ref) # Counts based on TF-IDF
-    apply_baseline(scores_baseline, train, ref, counting="TF-IDF")
+    scores_baseline = sim_baseline_tfidf(train, ref)
+    #apply_baseline(scores_baseline, train, ref, counting="TF-IDF")
     
     # Topic models: train on student answers
     # Two topic models to choose from: "LDA" and "LSA"
@@ -783,19 +786,19 @@ if __name__ == "__main__":
     #topic_mod_students_cross_val(train, ref, dictio, topic_mod="LDA", counting="binary")
     #topic_mod_students_cross_val(train, ref, dictio, topic_mod="LSA", counting="raw")
     #topic_mod_students_cross_val(train, ref, dictio, topic_mod="LSA", counting="binary")
-    topic_mod_students_cross_val(train, ref, dictio, topic_mod="LSA", counting="TF-IDF")
+    #topic_mod_students_cross_val(train, ref, dictio, topic_mod="LSA", counting="TF-IDF")
  
     # Topic models: train on Psychology book
     # Topic models and counting methods as above
     #LDA_book_raw = topic_mod_book(df_book, train, ref, topic_mod="LDA", counting="raw") 
     #LDA_book_binary = topic_mod_book(df_book, train, ref, topic_mod="LDA", counting="binary") 
-    LSA_book_raw = topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="raw") 
+    #LSA_book_raw = topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="raw") 
     #LSA_book_binary = topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="binary") 
-    ###lsa_book_tfidf = topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="TF-IDF") # NOT WORKING
+    #lsa_book_tfidf = topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="TF-IDF") # NOT WORKING
     
+    '''
     # Running on the test data
     print("\nRunning on the test data\n")
-    #real_grades = list(test['Grade']) # Nodig???
         
     # Topic models that are trained on student data
     topic_mod, counts_test, counts_ref = topic_mod_students(df, dictio, topic_mod="LSA", counting="TF-IDF") # Train model on all student data (rather than a training subset)
@@ -819,3 +822,4 @@ if __name__ == "__main__":
     
     # Assigning the most common grade to everyone
     baseline_most_common(test)   
+    '''
