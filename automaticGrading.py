@@ -237,30 +237,6 @@ def histogram(train):
 ### BASELINE MODELS
 ### ----------------
 
-# What is the correlation when assigning the most prevalent grade (10) to all student answers?
-# It will be zero, because x and y don't vary together.
-
-def baseline_most_common(train):
-    grades = train['Grade']
-    
-    real_grades = list(grades)
-    pred_grades = [mode(grades)]*len(real_grades) # Find the most common grade and copy it len(real_grades) times
-        
-    # Average difference between real and predicted grades
-    av_real_grades = np.average(real_grades)
-    av_pred_grades = np.average(pred_grades)
-    av_diff = av_real_grades - av_pred_grades
-    print("The average score of the real grades is:", av_real_grades)
-    print("The grade predicted for everyone is:", av_pred_grades)
-    print("The difference is:", av_diff)
-    
-    # Sum of squared errors        
-    squared_errors = [(pred_grades[x] - real_grades[x])**2 for x in range(len(pred_grades))]
-    sse = sum(squared_errors)
-    
-    print("\nThe sum of the squared errors is:", sse) 
-
-
 # Get cosine similarity between student answers and reference answer based on raw counts
 def sim_baseline(train, ref, counting):
     
@@ -347,6 +323,36 @@ def sim_baseline_tfidf(train, ref):
             sim_scores.append(0) 
             
     return sim_scores
+
+
+def apply_baseline(scores_baseline, df_stud, ref, counting):
+        pred_grades = sim_times_ten(scores_baseline)
+        real_grades = list(df_stud["Grade"])
+        evaluate(pred_grades, real_grades, "baseline", counting)
+        
+        
+# What happens when we assign the most prevalent grade (10) to all student answers?
+def baseline_most_common(train):
+    grades = train['Grade']
+    
+    real_grades = list(grades)
+    pred_grades = [mode(grades)]*len(real_grades) # Find the most common grade and copy it len(real_grades) times
+        
+    # A correlation cannot be obtained, because x and y don't vary together
+    
+    # Average difference between real and predicted grades
+    av_real_grades = round(np.average(real_grades), 2)
+    av_pred_grades = round(np.average(pred_grades), 2)
+    av_diff = round(av_real_grades - av_pred_grades, 2)
+    print("The average score of the real grades is:", av_real_grades)
+    print("The grade predicted for everyone is:", av_pred_grades)
+    print("The difference is:", av_diff)
+    
+    # Sum of squared errors        
+    squared_errors = [(pred_grades[x] - real_grades[x])**2 for x in range(len(pred_grades))]
+    sse = sum(squared_errors)
+    
+    print("\nThe sum of the squared errors is:", sse) 
 
 
 ### -------------
@@ -441,9 +447,9 @@ def topic_mod_students_cross_val(train, ref, dictio, topic_mod="LSA", counting="
         all_sse.append(sse)
           
     # Average correlation over 10 folds
-    av_correl = sum(all_corrs) / len(all_corrs)
-    av_diff = sum(all_av_diff) / len(all_av_diff)
-    av_sse = sum(all_sse) / len(all_sse)
+    av_correl = round(sum(all_corrs) / len(all_corrs), 2)
+    av_diff = round(sum(all_av_diff) / len(all_av_diff), 2)
+    av_sse = round(sum(all_sse) / len(all_sse), 2)
     print("\nThe average correlation over", k, "folds is:", av_correl)
     print("The average difference between the real and predicted grades is:", av_diff)
     print("The average SSE is:", av_sse, "\n")
@@ -478,19 +484,25 @@ def topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="TF-IDF"):
     elif topic_mod == "LSA":
         model_book = lsa(dictio_book, counts_book)
     
+    apply_topic_mod(model_book, train, counts_train, counts_ref, counting)
+    
+    return model_book
+
+
+def apply_topic_mod(topic_mod, df_stud, counts_stud, counts_ref, counting):
+    
     # Get similarity scores of training answers to reference answer
-    sim_scores = sim_topic_mod(model_book, counts_train, counts_ref)
+    sim_scores = sim_topic_mod(topic_mod, counts_stud, counts_ref)
     
     # Transform similarity scores into grades
     pred_grades = sim_times_ten(sim_scores)
+    #pred_grades = round_sim_to_ten(sim_scores)
     
     # Get assigned grades
-    real_grades = list(train["Grade"])
+    real_grades = list(df_stud["Grade"])
     
     # Get correlation between predicted grades (validation set) and lecturer-assigned grades 
     evaluate(pred_grades, real_grades, topic_mod, counting)
-    
-    return model_book
 
 
 ### ------------------------------
@@ -700,7 +712,7 @@ def round_sim_to_ten(sim_scores):
 # Get evaluation measures: correlation, averages, SSE
 def evaluate(pred_grades, real_grades, model, counting):
     correl, sig = pearsonr(pred_grades, real_grades)
-    print("For the", model, "model with", counting, "counting, the correlation between the predicted and real grades is:", correl, "\n")
+    print("For the", model, "model with", counting, "counting, the correlation between the predicted and real grades is:", round(correl, 2), "\n")
           
     # Plot the predicted grades and lecturer-assigned grades
     df_grades = pd.DataFrame({'Predicted': pred_grades, 'Assigned': real_grades})
@@ -713,13 +725,13 @@ def evaluate(pred_grades, real_grades, model, counting):
     av_real_grades = np.average(real_grades)
     av_pred_grades = np.average(pred_grades)
     av_diff = av_real_grades - av_pred_grades
-    print("The average score of the real grades is:", av_real_grades)
-    print("The average score of the predicted grades is:", av_pred_grades)
-    print("The difference is:", av_diff)
+    print("The average score of the real grades is:", round(av_real_grades, 2))
+    print("The average score of the predicted grades is:", round(av_pred_grades, 2))
+    print("The difference is:", round(av_diff, 2))
     
     # Sum of squared errors        
     squared_errors = [(pred_grades[x] - real_grades[x])**2 for x in range(len(pred_grades))]
-    sse = sum(squared_errors)
+    sse = round(sum(squared_errors), 2)
     
     print("\nThe sum of the squared errors is:", sse) 
         
@@ -755,59 +767,55 @@ if __name__ == "__main__":
     df_book = tok_lem(df_book) # Tokenize, lemmatize, remove stop words
  
     # Baseline models
-    scores_baseline = sim_baseline(train, ref, counting="binary") # Raw counts or binary counts
-    pred_grades = sim_times_ten(scores_baseline)
-    real_grades = list(train["Grade"])
-    evaluate(pred_grades, real_grades, model="baseline", counting="binary")
+    scores_baseline = sim_baseline(train, ref, counting="raw")
+    apply_baseline(scores_baseline, train, ref, counting="raw")
     
-    tfidf_scores_baseline = sim_baseline_tfidf(train, ref) # Counts based on TF-IDF
-    pred_grades = sim_times_ten(tfidf_scores_baseline)
-    real_grades = list(train["Grade"])
-    evaluate(pred_grades, real_grades, model="baseline", counting="TF-IDF")
+    scores_baseline = sim_baseline(train, ref, counting="binary") # Raw counts or binary counts
+    apply_baseline(scores_baseline, train, ref, counting="binary")
+ 
+    scores_baseline = sim_baseline_tfidf(train, ref) # Counts based on TF-IDF
+    apply_baseline(scores_baseline, train, ref, counting="TF-IDF")
     
     # Topic models: train on student answers
     # Two topic models to choose from: "LDA" and "LSA"
     # Three counting methods to choose from: "raw", "binary", and "TF-IDF" (the latter only for LSA)
-    topic_mod_students_cross_val(train, ref, dictio, topic_mod="LDA", counting="raw")
-    topic_mod_students_cross_val(train, ref, dictio, topic_mod="LDA", counting="binary")
-    topic_mod_students_cross_val(train, ref, dictio, topic_mod="LSA", counting="raw")
-    topic_mod_students_cross_val(train, ref, dictio, topic_mod="LSA", counting="binary")
+    #topic_mod_students_cross_val(train, ref, dictio, topic_mod="LDA", counting="raw")
+    #topic_mod_students_cross_val(train, ref, dictio, topic_mod="LDA", counting="binary")
+    #topic_mod_students_cross_val(train, ref, dictio, topic_mod="LSA", counting="raw")
+    #topic_mod_students_cross_val(train, ref, dictio, topic_mod="LSA", counting="binary")
     topic_mod_students_cross_val(train, ref, dictio, topic_mod="LSA", counting="TF-IDF")
  
     # Topic models: train on Psychology book
     # Topic models and counting methods as above
-    LDA_book_raw = topic_mod_book(df_book, train, ref, topic_mod="LDA", counting="raw") 
-    LDA_book_binary = topic_mod_book(df_book, train, ref, topic_mod="LDA", counting="binary") 
+    #LDA_book_raw = topic_mod_book(df_book, train, ref, topic_mod="LDA", counting="raw") 
+    #LDA_book_binary = topic_mod_book(df_book, train, ref, topic_mod="LDA", counting="binary") 
     LSA_book_raw = topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="raw") 
-    LSA_book_binary = topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="binary") 
+    #LSA_book_binary = topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="binary") 
     ###lsa_book_tfidf = topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="TF-IDF") # NOT WORKING
     
     # Running on the test data
     print("\nRunning on the test data\n")
-    real_grades = list(test['Grade'])
+    #real_grades = list(test['Grade']) # Nodig???
         
     # Topic models that are trained on student data
-    model, counts_test, counts_ref = topic_mod_students(df, dictio, topic_mod="LSA", counting="TF-IDF") # Train model on all student data (rather than a training subset)
-    sim_scores = sim_topic_mod(model, counts_test, counts_ref) # Get similarity scores
-    pred_grades = sim_times_ten(sim_scores) # Transform similarity scores into grades
-    evaluate(pred_grades, real_grades, model, "binary") # Evaluate
-    
-    # Topic models that are trained on psychology book
-    model = LSA_book_raw
+    topic_mod, counts_test, counts_ref = topic_mod_students(df, dictio, topic_mod="LSA", counting="TF-IDF") # Train model on all student data (rather than a training subset)
+    apply_topic_mod(topic_mod, test, counts_test, counts_ref, "TF-IDF")
+        
+    # Topic models that are trained on Psychology book
+    topic_mod = LSA_book_raw
     counting = "raw"
     counts_train, counts_ref, counts_test = dtm(train, ref, test, df_book, counting=counting, training_data="book")
-    sim_scores = sim_topic_mod(model, counts_test, counts_ref) # Get similarity scores of test answers to reference answer
-    pred_grades = sim_times_ten(sim_scores) # Transform similarity scores into grades
-    evaluate(pred_grades, real_grades, model, counting=counting) # Evaluate
-    
+    apply_topic_mod(topic_mod, test, counts_test, counts_ref, counting)
+        
     # Baseline models (not trained)
-    scores_baseline = sim_baseline(test, ref, counting="binary") # Raw counts or binary counts
-    pred_grades = sim_times_ten(scores_baseline)
-    evaluate(pred_grades, real_grades, model="baseline", counting="binary")
+    scores_baseline = sim_baseline(test, ref, counting="raw")
+    apply_baseline(scores_baseline, test, ref, counting="raw")
     
-    tfidf_scores_baseline = sim_baseline_tfidf(test, ref) # Counts based on TF-IDF
-    pred_grades = sim_times_ten(tfidf_scores_baseline)
-    evaluate(pred_grades, real_grades, model="baseline", counting="TF-IDF")
+    scores_baseline = sim_baseline(test, ref, counting="binary")
+    apply_baseline(scores_baseline, test, ref, counting="binary")
+ 
+    scores_baseline = sim_baseline_tfidf(test, ref)
+    apply_baseline(scores_baseline, test, ref, counting="TF-IDF")
     
     # Assigning the most common grade to everyone
     baseline_most_common(test)   
