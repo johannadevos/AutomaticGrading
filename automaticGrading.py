@@ -12,6 +12,7 @@ import os
 import pandas as pd
 import random
 import re
+import sklearn.model_selection
 
 from gensim import corpora, models
 from matplotlib.pyplot import show, close
@@ -19,9 +20,9 @@ from nltk.tokenize import RegexpTokenizer
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import stopwords
 from nltk.tokenize import sent_tokenize
-from scipy.stats.stats import pearsonr
+from scipy.stats import pearsonr
+from scipy.stats import spearmanr
 from scipy import spatial
-import sklearn.model_selection
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
 from statistics import mode
@@ -31,8 +32,8 @@ from statistics import mode
 random.seed(2017)
 
 # Set working directory
-os.chdir("C:/Users/johan/Documents/GitHub/AutomaticGrading")
-#os.chdir("C:/Users/U908153/Desktop/GitHub/AutomaticGrading")
+#os.chdir("C:/Users/johan/Documents/GitHub/AutomaticGrading")
+os.chdir("C:/Users/U908153/Desktop/GitHub/AutomaticGrading")
 
 
 ### ------------------
@@ -230,7 +231,7 @@ def histogram(train):
     ax.set_ylabel('Counts')
     ax.set_xticks(range(0,11,1))
     ax.set_title('Histogram of grades')
-    close(fig)
+    #close(fig)
     
     
 ### ----------------
@@ -325,6 +326,7 @@ def sim_baseline_tfidf(train, ref):
     return sim_scores
 
 
+# Get grades predicted by baseline and evaluate
 def apply_baseline(scores_baseline, df_stud, ref, counting):
         pred_grades = sim_times_ten(scores_baseline)
         real_grades = list(df_stud["Grade"])
@@ -362,10 +364,10 @@ def baseline_most_common(train):
 # Generate LDA model
 def lda(dictio, dtm_train):
     print("Training the LDA model...\n")
-    
-    ldamod = models.ldamodel.LdaModel(dtm_train, num_topics=10, id2word = dictio, passes = 20)
-    #print("This is the LDA model:\n")
-    #print(ldamod.print_topics(num_topics=6, num_words=4))
+    ldamod = models.ldamodel.LdaModel(dtm_train, id2word = dictio, num_topics=7, passes = 20)
+    #ldamod = models.ldamodel.LdaModel(dtm_train, id2word = dictio, chunksize = 1, num_topics=7, passes = 10)
+    print("This is the LDA model:\n")
+    print(ldamod.print_topics(num_topics=7, num_words=4))
     
     return ldamod
 
@@ -374,9 +376,9 @@ def lda(dictio, dtm_train):
 def lsa(dictio, dtm_train):
     print("Training the LSA model...\n")
     
-    lsamod = models.LsiModel(dtm_train, id2word=dictio, num_topics=20, chunksize=1, distributed=False) 
+    lsamod = models.LsiModel(dtm_train, id2word=dictio, chunksize = 1, num_topics=20, distributed=False) 
     #print("This is the LSA model:\n")
-    #print(lsamod.print_topics(num_topics=20, num_words=5))
+    #print(lsamod.print_topics(num_topics=200, num_words=5))
     
     return lsamod
 
@@ -404,7 +406,7 @@ def topic_mod_students_cross_val(train, ref, dictio, topic_mod="LSA", counting="
     counts_train, counts_ref = dtm(train, ref, None, None, counting, "student answers")
     
     # Stratified k-fold cross-validation (stratificiation is based on the real grades)
-    k = 2
+    k = 10
     skf = sklearn.model_selection.StratifiedKFold(n_splits=k) 
     
     # Get index of Grade column in dataframe
@@ -495,7 +497,7 @@ def apply_topic_mod(topic_mod, df_stud, counts_stud, counts_ref, counting):
     sim_scores = sim_topic_mod(topic_mod, counts_stud, counts_ref)
     
     # Transform similarity scores into grades
-    pred_grades = sim_times_ten(sim_scores)
+    pred_grades = round_sim_to_ten(sim_scores)
     #pred_grades = round_sim_to_ten(sim_scores)
     
     # Get assigned grades
@@ -639,14 +641,10 @@ def tfidf(train, ref, test, book):
     # Temporarily merge 'train' and 'ref' into one dataframe
     df_tfidf = ref.append(train)  
     
-    if test is None:
-        len_test = 0    
-    elif test is not None:
+    if test is not None:
         df_tfidf = df_tfidf.append(test)
         
-    if book is None:
-        len_book = 0
-    elif book is not None:
+    if book is not None:
         df_tfidf = df_tfidf.append(book)
 
     # Get document-term matrix (TF-IDF)    
@@ -711,9 +709,11 @@ def round_sim_to_ten(sim_scores):
 
 # Get evaluation measures: correlation, averages, SSE
 def evaluate(pred_grades, real_grades, model, counting):
-    correl, sig = pearsonr(pred_grades, real_grades)
-    print("For the", model, "model with", counting, "counting, the correlation between the predicted and real grades is:", round(correl, 2), "\n")
-          
+    pearson, sig = pearsonr(pred_grades, real_grades)
+    spearman, sig = spearmanr(pred_grades, real_grades)
+    print("For the", model, "model with", counting, "counting, Pearson's r between the predicted and real grades is:", round(pearson, 2), "\n")
+    print("For the", model, "model with", counting, "counting, Spearman's r between the predicted and real grades is:", round(spearman, 2), "\n")    
+      
     # Plot the predicted grades and lecturer-assigned grades
     df_grades = pd.DataFrame({'Predicted': pred_grades, 'Assigned': real_grades})
     df_counts = df_grades.groupby(['Predicted', 'Assigned']).size().reset_index(name='Count')
@@ -735,7 +735,7 @@ def evaluate(pred_grades, real_grades, model, counting):
     
     print("\nThe sum of the squared errors is:", sse) 
         
-    return correl, av_diff, sse
+    return pearson, av_diff, sse
         
 
 ### --------
@@ -747,7 +747,8 @@ if __name__ == "__main__":
     # Read and prepare student data
     ref_answer_raw = open_file('referenceAnswer.txt') # Read reference answer
     ref_answer = preprocess(ref_answer_raw) # Preprocess reference answer
-    stud_answers_raw = open_file('studentAnswersUncorrected.txt') # Read student answers
+    stud_answers_raw = open_file('studentAnswersCorrected.txt') # Read student answers
+    #stud_answers_raw = open_file('studentAnswersUncorrected.txt') # Read student answers
     stud_answers = preprocess(stud_answers_raw) # Preprocess student answers
     df, cols = create_df(stud_answers) # Create dataframe of student answers
     df = add_ref(ref_answer, cols) # Add reference answer to dataframe
@@ -758,7 +759,7 @@ if __name__ == "__main__":
     
     # Read and prepare Psychology book
     book_raw = open_file('psyBook.txt') # Open book
-    book_raw = book_raw[:5000] # To try new things out without having to load a big dataset
+    book_raw = book_raw[:5000] # To try new things out without having to work with a big dataset
     book = book_raw.replace("\n", " ") # Remove white lines
     book = book.replace(chr(0x00AD), "") # Remove soft hyphens
     book = preprocess(book) # Preprocess book
@@ -771,20 +772,18 @@ if __name__ == "__main__":
     
     # Baseline models
     scores_baseline = sim_baseline(train, ref, counting="raw")
-    #apply_baseline(scores_baseline, train, ref, counting="raw")
+    apply_baseline(scores_baseline, train, ref, counting="raw")
     
     scores_baseline = sim_baseline(train, ref, counting="binary")
-    #apply_baseline(scores_baseline, train, ref, counting="binary")
+    apply_baseline(scores_baseline, train, ref, counting="binary")
  
     scores_baseline = sim_baseline_tfidf(train, ref)
-    #apply_baseline(scores_baseline, train, ref, counting="TF-IDF")
+    apply_baseline(scores_baseline, train, ref, counting="TF-IDF")
     
     # Topic models: train on student answers
-    # Two topic models to choose from: "LDA" and "LSA"
-    # Three counting methods to choose from: "raw", "binary", and "TF-IDF" (the latter only for LSA)
-    #topic_mod_students_cross_val(train, ref, dictio, topic_mod="LDA", counting="raw")
+    topic_mod_students_cross_val(train, ref, dictio, topic_mod="LDA", counting="raw")
     #topic_mod_students_cross_val(train, ref, dictio, topic_mod="LDA", counting="binary")
-    #topic_mod_students_cross_val(train, ref, dictio, topic_mod="LSA", counting="raw")
+    topic_mod_students_cross_val(train, ref, dictio, topic_mod="LSA", counting="raw")
     #topic_mod_students_cross_val(train, ref, dictio, topic_mod="LSA", counting="binary")
     #topic_mod_students_cross_val(train, ref, dictio, topic_mod="LSA", counting="TF-IDF")
  
@@ -792,17 +791,17 @@ if __name__ == "__main__":
     # Topic models and counting methods as above
     #LDA_book_raw = topic_mod_book(df_book, train, ref, topic_mod="LDA", counting="raw") 
     #LDA_book_binary = topic_mod_book(df_book, train, ref, topic_mod="LDA", counting="binary") 
-    #LSA_book_raw = topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="raw") 
+    LSA_book_raw = topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="raw") 
     #LSA_book_binary = topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="binary") 
-    #lsa_book_tfidf = topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="TF-IDF") # NOT WORKING
+    #LSA_book_tfidf = topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="TF-IDF") # NOT WORKING
     
     '''
     # Running on the test data
     print("\nRunning on the test data\n")
         
     # Topic models that are trained on student data
-    topic_mod, counts_test, counts_ref = topic_mod_students(df, dictio, topic_mod="LSA", counting="TF-IDF") # Train model on all student data (rather than a training subset)
-    apply_topic_mod(topic_mod, test, counts_test, counts_ref, "TF-IDF")
+    topic_mod, counts_test, counts_ref = topic_mod_students(df, dictio, topic_mod="LSA", counting="raw") # Train model on all student data (rather than a training subset)
+    apply_topic_mod(topic_mod, test, counts_test, counts_ref, "raw")
         
     # Topic models that are trained on Psychology book
     topic_mod = LSA_book_raw
