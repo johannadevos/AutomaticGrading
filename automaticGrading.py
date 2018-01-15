@@ -371,7 +371,7 @@ def baseline_most_common(train):
 # Generate LDA model
 def lda(dictio, dtm_train):
     print("\nTraining the LDA model...\n")
-    ldamod = models.ldamodel.LdaModel(dtm_train, id2word = dictio, num_topics=7, passes = 20, chunksize = 1)
+    ldamod = models.ldamodel.LdaModel(dtm_train, id2word = dictio, num_topics=2, passes = 20, chunksize = 1)
     #ldamod = models.ldamodel.LdaModel(dtm_train, id2word = dictio, chunksize = 1, num_topics=7, passes = 10)
     print("This is the LDA model:\n")
     print(ldamod.print_topics(num_topics=7, num_words=4))
@@ -383,10 +383,10 @@ def lda(dictio, dtm_train):
 def lsa(dictio, dtm_train):
     print("\nTraining the LSA model...\n")
     
-    lsamod = models.LsiModel(dtm_train, id2word=dictio, num_topics=20, distributed=False, chunksize = 1) 
+    lsamod = models.LsiModel(dtm_train, id2word=dictio, num_topics=100, distributed=False, chunksize = 1) 
     #lsamod = models.LsiModel(dtm_train, id2word=dictio, chunksize = 1, num_topics=20, distributed=False) 
-    #print("This is the LSA model:\n")
-    #print(lsamod.print_topics(num_topics=200, num_words=5))
+    print("This is the LSA model:\n")
+    print(lsamod.print_topics(num_topics=200, num_words=5))
     
     return lsamod
 
@@ -801,6 +801,7 @@ if __name__ == "__main__":
     ref, train, test = split(df) # Split the data into a 80/20 (train/test)
     histogram(train) # Explore the distribution of the grades
     
+    '''
     # Read and prepare Psychology book
     book_raw = open_file('psyBook.txt') # Open book
     #book_raw = book_raw[:5000] # To try new things out without having to work with a big dataset
@@ -810,7 +811,8 @@ if __name__ == "__main__":
     sent_book = sent_tokenize(book) # Split into sentences
     df_book, cols_book = create_df_book(sent_book) # Create dataframe 
     df_book = tok_lem(df_book) # Tokenize, lemmatize, remove stop words
- 
+    '''
+    
     # Create output file
     outfile = setup_outfile()
     
@@ -819,7 +821,7 @@ if __name__ == "__main__":
     counting = ["raw", "binary", "TF-IDF"]
     mapping = ["times_ten", "round_off"]
     
-    ### Running on the test data
+    ### Running on the training data
     print("\nRunning on the training data\n")
     
     # Baseline models
@@ -832,6 +834,7 @@ if __name__ == "__main__":
     #scores_baseline = sim_baseline_tfidf(train, ref)
     #apply_baseline(scores_baseline, train, ref, counting="TF-IDF")
     
+    '''
     # Same as above, but do it in a loop and write to file
     for count_method in counting:
         for mapp in mapping:
@@ -843,14 +846,16 @@ if __name__ == "__main__":
                 scores_baseline = sim_baseline_tfidf(train, ref)
                 pearson, spearman = apply_baseline(scores_baseline, train, ref, counting=count_method, mapping=mapp)
                 save_to_file(["baseline", count_method, "train", "student_answers", mapp, spelling_correction, str(pearson), str(spearman)], outfile)  
-            
+    '''
+        
     # Topic models: train on student answers
     #topic_mod_students_cross_val(train, ref, dictio, topic_mod="LDA", counting="raw")
     #topic_mod_students_cross_val(train, ref, dictio, topic_mod="LDA", counting="binary")
     #topic_mod_students_cross_val(train, ref, dictio, topic_mod="LSA", counting="raw")
     #topic_mod_students_cross_val(train, ref, dictio, topic_mod="LSA", counting="binary")
     #topic_mod_students_cross_val(train, ref, dictio, topic_mod="LSA", counting="TF-IDF")
- 
+    
+    '''
     # Same as above, but do it in a loop and write to file
     for model in topic_mods:
         for count_method in counting:
@@ -859,15 +864,17 @@ if __name__ == "__main__":
                
                     pearson, spearman = topic_mod_students_cross_val(train, ref, dictio, topic_mod=model, counting=count_method, mapping=mapp)
                     save_to_file([model, count_method, "train", "student_answers", mapp, spelling_correction, str(pearson), str(spearman)], outfile)  
-
+    '''
+    
     # Topic models: train on Psychology book
     # Topic models and counting methods as above
-    #LDA_book_raw = topic_mod_book(df_book, train, ref, topic_mod="LDA", counting="raw") 
-    #LDA_book_binary = topic_mod_book(df_book, train, ref, topic_mod="LDA", counting="binary") 
+    LDA_book_raw = topic_mod_book(df_book, train, ref, topic_mod="LDA", counting="raw") 
+    LDA_book_binary = topic_mod_book(df_book, train, ref, topic_mod="LDA", counting="binary") 
     #LSA_book_raw = topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="raw") 
     #LSA_book_binary = topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="binary") 
     #LSA_book_tfidf = topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="TF-IDF") # NOT WORKING
     
+    '''
     # Same as above, but do it in a loop and write to file
     trained_models = []
 
@@ -879,6 +886,7 @@ if __name__ == "__main__":
                     trained_model, pearson, spearman = topic_mod_book(df_book, train, ref, topic_mod=model, counting=count_method, mapping=mapp)
                     trained_models.append(trained_model)
                     save_to_file([model, count_method, "train", "textbook", mapp, spelling_correction, str(pearson), str(spearman)], outfile)  
+    
     
     ### Running on the test data
     print("\nRunning on the test data\n")
@@ -939,3 +947,4 @@ if __name__ == "__main__":
                     counter += 1
 
                     save_to_file([model, count_method, "test", "textbook", mapp, spelling_correction, str(pearson), str(spearman)], outfile)
+    '''
