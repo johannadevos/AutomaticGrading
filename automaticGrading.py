@@ -335,9 +335,9 @@ def apply_baseline(scores_baseline, df_stud, ref, counting, mapping):
             pred_grades = round_sim_to_ten(scores_baseline)
             
         real_grades = list(df_stud["Grade"])
-        pearson, spearman, av_diff, sse = evaluate(pred_grades, real_grades, "baseline", counting)
+        pearson, sig_pearson, spearman, sig_spearman, av_diff, sse = evaluate(pred_grades, real_grades, "baseline", counting)
         
-        return pearson, spearman
+        return pearson, sig_pearson, spearman, sig_spearman
         
         
 # What happens when we assign the most prevalent grade (10) to all student answers?
@@ -374,7 +374,7 @@ def lda(dictio, dtm_train):
     ldamod = models.ldamodel.LdaModel(dtm_train, id2word = dictio, num_topics=2, passes = 20, chunksize = 1)
     #ldamod = models.ldamodel.LdaModel(dtm_train, id2word = dictio, chunksize = 1, num_topics=7, passes = 10)
     print("This is the LDA model:\n")
-    print(ldamod.print_topics(num_topics=7, num_words=4))
+    print(ldamod.print_topics(num_topics=5, num_words=4))
     
     return ldamod
 
@@ -386,7 +386,7 @@ def lsa(dictio, dtm_train):
     lsamod = models.LsiModel(dtm_train, id2word=dictio, num_topics=100, distributed=False, chunksize = 1) 
     #lsamod = models.LsiModel(dtm_train, id2word=dictio, chunksize = 1, num_topics=20, distributed=False) 
     print("This is the LSA model:\n")
-    print(lsamod.print_topics(num_topics=200, num_words=5))
+    print(lsamod.print_topics(num_topics=5, num_words=5))
     
     return lsamod
 
@@ -408,7 +408,7 @@ def sim_topic_mod(model, dtm_train, dtm_ref):
 
 
 # For development: training a topic model on the student data with k-fold cross-validation
-def topic_mod_students_cross_val(train, ref, dictio, topic_mod="LSA", counting="TF-IDF", mapping="times_ten"):
+def topic_mod_students_cross_val(train, ref, dictio, topic_mod="LSA", counting="raw", mapping="times_ten"):
     
     # Get document-term matrices
     counts_train, counts_ref = dtm(train, ref, None, None, counting, "student answers")
@@ -422,7 +422,9 @@ def topic_mod_students_cross_val(train, ref, dictio, topic_mod="LSA", counting="
     
     # Create empty list to store the correlations of the k folds
     all_pearson = []
+    all_sig_pearson = []
     all_spearman = []
+    all_sig_spearman = []
     all_av_diff = []
     all_sse = []
      
@@ -455,15 +457,19 @@ def topic_mod_students_cross_val(train, ref, dictio, topic_mod="LSA", counting="
             pred_grades = round_sim_to_ten(sim_scores)
             
         # Evaluate
-        pearson, spearman, av_diff, sse = evaluate(pred_grades, real_grades_val, topic_mod, counting)
+        pearson, sig_pearson, spearman, sig_spearman, av_diff, sse = evaluate(pred_grades, real_grades_val, topic_mod, counting)
         all_pearson.append(pearson)
+        all_sig_pearson.append(sig_pearson)
         all_spearman.append(spearman)
+        all_sig_spearman.append(sig_spearman)
         all_av_diff.append(av_diff)
         all_sse.append(sse)
           
     # Average correlation over 10 folds
     av_pearson = round(sum(all_pearson) / len(all_pearson), 2)
+    av_sig_pearson = sum(all_sig_pearson) / len(all_sig_pearson)
     av_spearman = round(sum(all_spearman) / len(all_spearman), 2)
+    av_sig_spearman = sum(all_sig_spearman) / len(all_sig_spearman)
     av_diff = round(sum(all_av_diff) / len(all_av_diff), 2)
     av_sse = round(sum(all_sse) / len(all_sse), 2)
     print("\nThe average Pearson correlation over", k, "folds is:", av_pearson)
@@ -471,7 +477,7 @@ def topic_mod_students_cross_val(train, ref, dictio, topic_mod="LSA", counting="
     print("The average difference between the real and predicted grades is:", av_diff)
     print("The average SSE is:", av_sse, "\n")
     
-    return av_pearson, av_spearman
+    return av_pearson, av_sig_pearson, av_spearman, av_sig_spearman
     
     
 # For testing: training a topic model on all student data
@@ -503,9 +509,9 @@ def topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="raw", mapping
     elif topic_mod == "LSA":
         model_book = lsa(dictio_book, counts_book)
     
-    pearson, spearman = apply_topic_mod(model_book, train, counts_train, counts_ref, counting, mapping)
+    pearson, sig_pearson, spearman, sig_spearman = apply_topic_mod(model_book, train, counts_train, counts_ref, counting, mapping)
     
-    return model_book, pearson, spearman
+    return model_book, pearson, sig_pearson, spearman, sig_spearman
 
 
 def apply_topic_mod(topic_mod, df_stud, counts_stud, counts_ref, counting, mapping):
@@ -524,9 +530,9 @@ def apply_topic_mod(topic_mod, df_stud, counts_stud, counts_ref, counting, mappi
     real_grades = list(df_stud["Grade"])
     
     # Get correlation between predicted grades (validation set) and lecturer-assigned grades 
-    pearson, spearman, av_diff, sse = evaluate(pred_grades, real_grades, topic_mod, counting)
+    pearson, sig_pearson, spearman, sig_spearman, av_diff, sse = evaluate(pred_grades, real_grades, topic_mod, counting)
     
-    return pearson, spearman
+    return pearson, sig_pearson, spearman, sig_spearman
 
 ### ------------------------------
 ### FUNCTIONS NEEDED BY ALL MODELS
@@ -730,9 +736,9 @@ def round_sim_to_ten(sim_scores):
 
 # Get evaluation measures: correlation, averages, SSE
 def evaluate(pred_grades, real_grades, model, counting):
-    pearson, sig = pearsonr(pred_grades, real_grades)
+    pearson, sig_pearson = pearsonr(pred_grades, real_grades)
     pearson = round(pearson, 2)
-    spearman, sig = spearmanr(pred_grades, real_grades)
+    spearman, sig_spearman = spearmanr(pred_grades, real_grades)
     spearman = round(spearman, 2)
     print("For the", model, "model with", counting, "counting, Pearson's r between the predicted and real grades is:", pearson, "\n")
     print("For the", model, "model with", counting, "counting, Spearman's r between the predicted and real grades is:", spearman, "\n")    
@@ -758,12 +764,12 @@ def evaluate(pred_grades, real_grades, model, counting):
     
     print("\nThe sum of the squared errors is:", sse) 
         
-    return pearson, spearman, av_diff, sse
+    return pearson, sig_pearson, spearman, sig_spearman, av_diff, sse
 
 
 def setup_outfile():
     outfile = "C:/Users/johan/Dropbox/PhD/Courses/Text and multimedia mining/Project/Results.txt"
-    headers = ["Model", "Counting", "TrainOrTest", "TrainingData", "Mapping", "SpellingCorrection", "Pearson", "Spearman"]
+    headers = ["Model", "Counting", "TrainOrTest", "TrainingData", "Mapping", "SpellingCorrection", "Pearson", "SigPearson", "Spearman", "SigSpearman"]
     headers2 = "\t".join(headers)
     f = open(outfile, 'w') 
     f.write(headers2)
@@ -838,33 +844,32 @@ if __name__ == "__main__":
     # Same as above, but do it in a loop and write to file
     for count_method in counting:
         for mapp in mapping:
+            
             if not count_method == "TF-IDF":
                 scores_baseline = sim_baseline(train, ref, counting=count_method)
-                pearson, spearman = apply_baseline(scores_baseline, train, ref, counting=count_method, mapping=mapp)
-                save_to_file(["baseline", count_method, "train", "student_answers", mapp, spelling_correction, str(pearson), str(spearman)], outfile)  
             elif count_method == "TF-IDF":
                 scores_baseline = sim_baseline_tfidf(train, ref)
-                pearson, spearman = apply_baseline(scores_baseline, train, ref, counting=count_method, mapping=mapp)
-                save_to_file(["baseline", count_method, "train", "student_answers", mapp, spelling_correction, str(pearson), str(spearman)], outfile)  
-    '''
+            
+            pearson, sig_pearson, spearman, sig_spearman = apply_baseline(scores_baseline, train, ref, counting=count_method, mapping=mapp)
+            save_to_file(["baseline", count_method, "train", "student_answers", mapp, spelling_correction, str(pearson), str(sig_pearson), str(spearman), str(sig_spearman)], outfile)  
         
-    # Topic models: train on student answers
+    # Topic models: train on student answers (individually)
     #topic_mod_students_cross_val(train, ref, dictio, topic_mod="LDA", counting="raw")
     #topic_mod_students_cross_val(train, ref, dictio, topic_mod="LDA", counting="binary")
     #topic_mod_students_cross_val(train, ref, dictio, topic_mod="LSA", counting="raw")
     #topic_mod_students_cross_val(train, ref, dictio, topic_mod="LSA", counting="binary")
     #topic_mod_students_cross_val(train, ref, dictio, topic_mod="LSA", counting="TF-IDF")
+      
     
-    '''
     # Same as above, but do it in a loop and write to file
     for model in topic_mods:
         for count_method in counting:
             if not (model == "LDA" and count_method == "TF-IDF"):
                 for mapp in mapping:
                
-                    pearson, spearman = topic_mod_students_cross_val(train, ref, dictio, topic_mod=model, counting=count_method, mapping=mapp)
-                    save_to_file([model, count_method, "train", "student_answers", mapp, spelling_correction, str(pearson), str(spearman)], outfile)  
-    '''
+                    pearson, sig_pearson, spearman, sig_spearman = topic_mod_students_cross_val(train, ref, dictio, topic_mod=model, counting=count_method, mapping=mapp)
+                    save_to_file([model, count_method, "train", "student_answers", mapp, spelling_correction, str(pearson), str(sig_pearson), str(spearman), str(sig_spearman)], outfile)  
+    
     
     # Topic models: train on Psychology book
     # Topic models and counting methods as above
@@ -874,7 +879,6 @@ if __name__ == "__main__":
     #LSA_book_binary = topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="binary") 
     #LSA_book_tfidf = topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="TF-IDF") # NOT WORKING
     
-    '''
     # Same as above, but do it in a loop and write to file
     trained_models = []
 
@@ -883,10 +887,10 @@ if __name__ == "__main__":
             if not count_method == "TF-IDF": # Bug fix still needed
                 for mapp in mapping:
                     
-                    trained_model, pearson, spearman = topic_mod_book(df_book, train, ref, topic_mod=model, counting=count_method, mapping=mapp)
+                    trained_model, pearson, sig_pearson, spearman, sig_spearman = topic_mod_book(df_book, train, ref, topic_mod=model, counting=count_method, mapping=mapp)
                     trained_models.append(trained_model)
-                    save_to_file([model, count_method, "train", "textbook", mapp, spelling_correction, str(pearson), str(spearman)], outfile)  
-    
+                    save_to_file([model, count_method, "train", "textbook", mapp, spelling_correction, str(pearson), str(sig_pearson), str(spearman), str(sig_spearman)], outfile)  
+    '''
     
     ### Running on the test data
     print("\nRunning on the test data\n")
@@ -901,18 +905,18 @@ if __name__ == "__main__":
     #scores_baseline = sim_baseline_tfidf(test, ref)
     #apply_baseline(scores_baseline, test, ref, counting="TF-IDF")
     
+    
     # Same as above, but do it in a loop and write to file
     for count_method in counting:
         for mapp in mapping:
             if not count_method == "TF-IDF":
                 scores_baseline = sim_baseline(test, ref, counting=count_method)
-                pearson, spearman = apply_baseline(scores_baseline, test, ref, counting=count_method, mapping=mapp)
-                save_to_file(["baseline", count_method, "test", "student_answers", mapp, spelling_correction, str(pearson), str(spearman)], outfile)  
             elif count_method == "TF-IDF":
                 scores_baseline = sim_baseline_tfidf(test, ref)
-                pearson, spearman = apply_baseline(scores_baseline, test, ref, counting=count_method, mapping=mapp)
-                save_to_file(["baseline", count_method, "test", "student_answers", mapp, spelling_correction, str(pearson), str(spearman)], outfile)  
-
+            
+            pearson, sig_pearson, spearman, sig_spearman = apply_baseline(scores_baseline, test, ref, counting=count_method, mapping=mapp)
+            save_to_file(["baseline", count_method, "test", "student_answers", mapp, spelling_correction, str(pearson), str(sig_pearson), str(spearman), str(sig_spearman)], outfile)  
+           
     # Assigning the most common grade to everyone
     #baseline_most_common(test)   
 
@@ -920,13 +924,15 @@ if __name__ == "__main__":
     for model in topic_mods:
         for count_method in counting:
             if not (model == "LDA" and count_method == "TF-IDF"):
+                for mapp in mapping:
                
-                topic_mod, counts_test, counts_ref = topic_mod_students(df, dictio, topic_mod=model, counting=count_method) # Train model on all student data (rather than a training subset)
-                pearson, spearman = apply_topic_mod(topic_mod, test, counts_test, counts_ref, count_method, mapping=mapp)
-                
-                # Save to file
-                save_to_file([model, count_method, "test", "student_answers", "Mapping", spelling_correction, str(pearson), str(spearman)], outfile)
+                    topic_mod, counts_test, counts_ref = topic_mod_students(df, dictio, topic_mod=model, counting=count_method) # Train model on all student data (rather than a training subset)
+                    pearson, sig_pearson, spearman, sig_spearman = apply_topic_mod(topic_mod, test, counts_test, counts_ref, count_method, mapping=mapp)
+                    
+                    # Save to file
+                    save_to_file([model, count_method, "test", "student_answers", mapp, spelling_correction, str(pearson), str(sig_pearson), str(spearman), str(sig_spearman)], outfile)
 
+    '''
     # Topic models that are trained on Psychology book
     #topic_mod = LSA_book_raw
     #counting = "raw"
@@ -942,9 +948,9 @@ if __name__ == "__main__":
                     
                     trained_model = trained_models[counter]
                     counts_train, counts_ref, counts_test = dtm(train, ref, test, df_book, counting=count_method, training_data="book")
-                    pearson, spearman = apply_topic_mod(trained_model, test, counts_test, counts_ref, counting=count_method, mapping=mapp)
+                    pearson, sig_pearson, spearman, sig_spearman = apply_topic_mod(trained_model, test, counts_test, counts_ref, counting=count_method, mapping=mapp)
     
                     counter += 1
 
-                    save_to_file([model, count_method, "test", "textbook", mapp, spelling_correction, str(pearson), str(spearman)], outfile)
+                    save_to_file([model, count_method, "test", "textbook", mapp, spelling_correction, str(pearson), str(sig_pearson), str(spearman), str(sig_spearman)], outfile)
     '''
