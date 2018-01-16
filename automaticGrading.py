@@ -371,7 +371,7 @@ def baseline_most_common(train):
 # Generate LDA model
 def lda(dictio, dtm_train):
     print("\nTraining the LDA model...\n")
-    ldamod = models.ldamodel.LdaModel(dtm_train, id2word = dictio, num_topics=2, passes = 20, chunksize = 1)
+    ldamod = models.ldamodel.LdaModel(dtm_train, id2word = dictio, num_topics=20, passes = 20, chunksize = 1)
     #ldamod = models.ldamodel.LdaModel(dtm_train, id2word = dictio, chunksize = 1, num_topics=7, passes = 10)
     print("This is the LDA model:\n")
     print(ldamod.print_topics(num_topics=5, num_words=5))
@@ -383,7 +383,7 @@ def lda(dictio, dtm_train):
 def lsa(dictio, dtm_train):
     print("\nTraining the LSA model...\n")
     
-    lsamod = models.LsiModel(dtm_train, id2word=dictio, num_topics=100, distributed=False, chunksize = 1) 
+    lsamod = models.LsiModel(dtm_train, id2word=dictio, num_topics=10, distributed=False, chunksize = 1) 
     #lsamod = models.LsiModel(dtm_train, id2word=dictio, chunksize = 1, num_topics=20, distributed=False) 
     print("This is the LSA model:\n")
     print(lsamod.print_topics(num_topics=5, num_words=5))
@@ -795,10 +795,10 @@ if __name__ == "__main__":
     # Read and prepare student data
     ref_answer_raw = open_file('referenceAnswer.txt') # Read reference answer
     ref_answer = preprocess(ref_answer_raw) # Preprocess reference answer
-    #stud_answers_raw = open_file('studentAnswersCorrected.txt') # Read student answers
-    #spelling_correction = "Yes"
-    stud_answers_raw = open_file('studentAnswersUncorrected.txt') # Read student answers
-    spelling_correction = "No"
+    stud_answers_raw = open_file('studentAnswersCorrected.txt') # Read student answers
+    spelling_correction = "Yes"
+    #stud_answers_raw = open_file('studentAnswersUncorrected.txt') # Read student answers
+    #spelling_correction = "No"
     stud_answers = preprocess(stud_answers_raw) # Preprocess student answers
     df, cols = create_df(stud_answers) # Create dataframe of student answers
     df = add_ref(ref_answer, cols) # Add reference answer to dataframe
@@ -885,13 +885,14 @@ if __name__ == "__main__":
 
     for model in topic_mods:
         for count_method in counting:
+            #if not (model == "LDA" and count_method == "TF-IDF"):
             if not count_method == "TF-IDF": # Bug fix still needed
                 for mapp in mapping:
                     
                     trained_model, pearson, sig_pearson, spearman, sig_spearman = topic_mod_book(df_book, train, ref, topic_mod=model, counting=count_method, mapping=mapp)
                     trained_models.append(trained_model)
-                    save_to_file([model, count_method, "train", "textbook", mapp, spelling_correction, str(pearson), str(sig_pearson), str(spearman), str(sig_spearman)], outfile)  
-    '''
+                    #save_to_file([model, count_method, "train", "textbook", mapp, spelling_correction, str(pearson), str(sig_pearson), str(spearman), str(sig_spearman)], outfile)  
+    
     
     ### Running on the test data
     print("\nRunning on the test data\n")
@@ -906,7 +907,6 @@ if __name__ == "__main__":
     #scores_baseline = sim_baseline_tfidf(test, ref)
     #apply_baseline(scores_baseline, test, ref, counting="TF-IDF")
     
-    
     # Same as above, but do it in a loop and write to file
     for count_method in counting:
         for mapp in mapping:
@@ -916,12 +916,12 @@ if __name__ == "__main__":
                 scores_baseline = sim_baseline_tfidf(test, ref)
             
             pearson, sig_pearson, spearman, sig_spearman = apply_baseline(scores_baseline, test, ref, counting=count_method, mapping=mapp)
-            save_to_file(["baseline", count_method, "test", "student_answers", mapp, spelling_correction, str(pearson), str(sig_pearson), str(spearman), str(sig_spearman)], outfile)  
+            save_to_file(["baseline", count_method, "test", "none", mapp, spelling_correction, str(pearson), str(sig_pearson), str(spearman), str(sig_spearman)], outfile)  
            
     # Assigning the most common grade to everyone
     #baseline_most_common(test)   
 
-    
+    '''
     # Topic models that are trained on student data
     for model in topic_mods:
         for count_method in counting:
@@ -933,7 +933,7 @@ if __name__ == "__main__":
                     
                     # Save to file
                     save_to_file([model, count_method, "test", "student_answers", mapp, spelling_correction, str(pearson), str(sig_pearson), str(spearman), str(sig_spearman)], outfile)
-                    
+    '''                
     
     # Topic models that are trained on Psychology book
     #topic_mod = LSA_book_raw
@@ -955,4 +955,3 @@ if __name__ == "__main__":
                     counter += 1
 
                     save_to_file([model, count_method, "test", "textbook", mapp, spelling_correction, str(pearson), str(sig_pearson), str(spearman), str(sig_spearman)], outfile)
-    '''
