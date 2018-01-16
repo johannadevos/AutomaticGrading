@@ -374,7 +374,7 @@ def lda(dictio, dtm_train):
     ldamod = models.ldamodel.LdaModel(dtm_train, id2word = dictio, num_topics=2, passes = 20, chunksize = 1)
     #ldamod = models.ldamodel.LdaModel(dtm_train, id2word = dictio, chunksize = 1, num_topics=7, passes = 10)
     print("This is the LDA model:\n")
-    print(ldamod.print_topics(num_topics=5, num_words=4))
+    print(ldamod.print_topics(num_topics=5, num_words=5))
     
     return ldamod
 
@@ -795,10 +795,10 @@ if __name__ == "__main__":
     # Read and prepare student data
     ref_answer_raw = open_file('referenceAnswer.txt') # Read reference answer
     ref_answer = preprocess(ref_answer_raw) # Preprocess reference answer
-    stud_answers_raw = open_file('studentAnswersCorrected.txt') # Read student answers
-    spelling_correction = "Yes"
-    #stud_answers_raw = open_file('studentAnswersUncorrected.txt') # Read student answers
-    #spelling_correction = "No"
+    #stud_answers_raw = open_file('studentAnswersCorrected.txt') # Read student answers
+    #spelling_correction = "Yes"
+    stud_answers_raw = open_file('studentAnswersUncorrected.txt') # Read student answers
+    spelling_correction = "No"
     stud_answers = preprocess(stud_answers_raw) # Preprocess student answers
     df, cols = create_df(stud_answers) # Create dataframe of student answers
     df = add_ref(ref_answer, cols) # Add reference answer to dataframe
@@ -807,9 +807,9 @@ if __name__ == "__main__":
     ref, train, test = split(df) # Split the data into a 80/20 (train/test)
     histogram(train) # Explore the distribution of the grades
     
-    '''
+    
     # Read and prepare Psychology book
-    book_raw = open_file('psyBook.txt') # Open book
+    book_raw = open_file('psyBookChapter10.txt') # Open book
     #book_raw = book_raw[:5000] # To try new things out without having to work with a big dataset
     book = book_raw.replace("\n", " ") # Remove white lines
     book = book.replace(chr(0x00AD), "") # Remove soft hyphens
@@ -817,13 +817,13 @@ if __name__ == "__main__":
     sent_book = sent_tokenize(book) # Split into sentences
     df_book, cols_book = create_df_book(sent_book) # Create dataframe 
     df_book = tok_lem(df_book) # Tokenize, lemmatize, remove stop words
-    '''
+    
     
     # Create output file
     outfile = setup_outfile()
     
     # List models, counting methods, and mapping algorithms
-    topic_mods = ["LSA", "LDA"]
+    topic_mods = ["LDA", "LSA"]
     counting = ["raw", "binary", "TF-IDF"]
     mapping = ["times_ten", "round_off"]
     
@@ -878,6 +878,7 @@ if __name__ == "__main__":
     #LSA_book_raw = topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="raw") 
     #LSA_book_binary = topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="binary") 
     #LSA_book_tfidf = topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="TF-IDF") # NOT WORKING
+    '''
     
     # Same as above, but do it in a loop and write to file
     trained_models = []
@@ -920,6 +921,7 @@ if __name__ == "__main__":
     # Assigning the most common grade to everyone
     #baseline_most_common(test)   
 
+    
     # Topic models that are trained on student data
     for model in topic_mods:
         for count_method in counting:
@@ -931,8 +933,8 @@ if __name__ == "__main__":
                     
                     # Save to file
                     save_to_file([model, count_method, "test", "student_answers", mapp, spelling_correction, str(pearson), str(sig_pearson), str(spearman), str(sig_spearman)], outfile)
-
-    '''
+                    
+    
     # Topic models that are trained on Psychology book
     #topic_mod = LSA_book_raw
     #counting = "raw"
