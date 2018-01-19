@@ -231,7 +231,7 @@ def histogram(train):
     ax.set_ylabel('Counts')
     ax.set_xticks(range(0,11,1))
     ax.set_title('Histogram of grades')
-    #close(fig)
+    show(fig)
     
     
 ### ----------------
@@ -371,7 +371,7 @@ def baseline_most_common(train):
 # Generate LDA model
 def lda(dictio, dtm_train):
     print("\nTraining the LDA model...\n")
-    ldamod = models.ldamodel.LdaModel(dtm_train, id2word = dictio, num_topics=20, passes = 20, chunksize = 1)
+    ldamod = models.ldamodel.LdaModel(dtm_train, id2word = dictio, num_topics=2, passes = 20, chunksize = 1)
     #ldamod = models.ldamodel.LdaModel(dtm_train, id2word = dictio, chunksize = 1, num_topics=7, passes = 10)
     print("This is the LDA model:\n")
     print(ldamod.print_topics(num_topics=5, num_words=5))
@@ -746,7 +746,7 @@ def evaluate(pred_grades, real_grades, model, counting):
     # Plot the predicted grades and lecturer-assigned grades
     df_grades = pd.DataFrame({'Predicted': pred_grades, 'Assigned': real_grades})
     df_counts = df_grades.groupby(['Predicted', 'Assigned']).size().reset_index(name='Count')
-    df_counts.plot(kind='scatter', x='Predicted', y='Assigned', s=df_counts['Count'], xlim=[-0.3,10.3])
+    df_counts.plot(kind='scatter', x='Predicted', y='Assigned', title='Best LDA model: Correlation between predicted and assigned grades', s=df_counts['Count'], xlim=[-0.3,10.3])
     show()
     plt.close()
     
@@ -807,7 +807,7 @@ if __name__ == "__main__":
     ref, train, test = split(df) # Split the data into a 80/20 (train/test)
     histogram(train) # Explore the distribution of the grades
     
-    
+    '''
     # Read and prepare Psychology book
     book_raw = open_file('psyBookChapter10.txt') # Open book
     #book_raw = book_raw[:5000] # To try new things out without having to work with a big dataset
@@ -817,7 +817,7 @@ if __name__ == "__main__":
     sent_book = sent_tokenize(book) # Split into sentences
     df_book, cols_book = create_df_book(sent_book) # Create dataframe 
     df_book = tok_lem(df_book) # Tokenize, lemmatize, remove stop words
-    
+    '''
     
     # Create output file
     outfile = setup_outfile()
@@ -870,16 +870,17 @@ if __name__ == "__main__":
                     pearson, sig_pearson, spearman, sig_spearman = topic_mod_students_cross_val(train, ref, dictio, topic_mod=model, counting=count_method, mapping=mapp)
                     save_to_file([model, count_method, "train", "student_answers", mapp, spelling_correction, str(pearson), str(sig_pearson), str(spearman), str(sig_spearman)], outfile)  
     
+    '''
     
     # Topic models: train on Psychology book
     # Topic models and counting methods as above
-    LDA_book_raw = topic_mod_book(df_book, train, ref, topic_mod="LDA", counting="raw") 
-    LDA_book_binary = topic_mod_book(df_book, train, ref, topic_mod="LDA", counting="binary") 
+    #LDA_book_raw = topic_mod_book(df_book, train, ref, topic_mod="LDA", counting="raw") 
+    #LDA_book_binary = topic_mod_book(df_book, train, ref, topic_mod="LDA", counting="binary") 
     #LSA_book_raw = topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="raw") 
     #LSA_book_binary = topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="binary") 
     #LSA_book_tfidf = topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="TF-IDF") # NOT WORKING
-    '''
     
+    '''
     # Same as above, but do it in a loop and write to file
     trained_models = []
 
@@ -906,6 +907,7 @@ if __name__ == "__main__":
  
     #scores_baseline = sim_baseline_tfidf(test, ref)
     #apply_baseline(scores_baseline, test, ref, counting="TF-IDF")
+    '''
     
     # Same as above, but do it in a loop and write to file
     for count_method in counting:
@@ -920,7 +922,7 @@ if __name__ == "__main__":
            
     # Assigning the most common grade to everyone
     #baseline_most_common(test)   
-
+    
     '''
     # Topic models that are trained on student data
     for model in topic_mods:
@@ -933,7 +935,6 @@ if __name__ == "__main__":
                     
                     # Save to file
                     save_to_file([model, count_method, "test", "student_answers", mapp, spelling_correction, str(pearson), str(sig_pearson), str(spearman), str(sig_spearman)], outfile)
-    '''                
     
     # Topic models that are trained on Psychology book
     #topic_mod = LSA_book_raw
@@ -955,3 +956,4 @@ if __name__ == "__main__":
                     counter += 1
 
                     save_to_file([model, count_method, "test", "textbook", mapp, spelling_correction, str(pearson), str(sig_pearson), str(spearman), str(sig_spearman)], outfile)
+                    '''
