@@ -827,40 +827,56 @@ if __name__ == "__main__":
     
     # Baseline models
     scores_baseline = sim_baseline(train, ref, counting="raw")
-    apply_baseline(scores_baseline, train, ref, counting="raw", mapping = "times_ten")
+    apply_baseline(scores_baseline, train, ref, counting="raw", 
+                   mapping = "times_ten")
     
     scores_baseline = sim_baseline(train, ref, counting="binary")
-    apply_baseline(scores_baseline, train, ref, counting="binary", mapping = "times_ten")
+    apply_baseline(scores_baseline, train, ref, counting="binary", 
+                   mapping = "times_ten")
  
     scores_baseline = sim_baseline_tfidf(train, ref)
-    apply_baseline(scores_baseline, train, ref, counting="TF-IDF", mapping = "times_ten")
+    apply_baseline(scores_baseline, train, ref, counting="TF-IDF", 
+                   mapping = "times_ten")
     
     # Topic models: train on student answers
-    topic_mod_students_cross_val(train, ref, dictio, topic_mod="LDA", counting="raw")
-    topic_mod_students_cross_val(train, ref, dictio, topic_mod="LDA", counting="binary")
-    topic_mod_students_cross_val(train, ref, dictio, topic_mod="LSA", counting="raw")
-    topic_mod_students_cross_val(train, ref, dictio, topic_mod="LSA", counting="binary")
-    topic_mod_students_cross_val(train, ref, dictio, topic_mod="LSA", counting="TF-IDF")
+    topic_mod_students_cross_val(train, ref, dictio, topic_mod="LDA", 
+                                 counting="raw")
+    topic_mod_students_cross_val(train, ref, dictio, topic_mod="LDA", 
+                                 counting="binary")
+    topic_mod_students_cross_val(train, ref, dictio, topic_mod="LSA", 
+                                 counting="raw")
+    topic_mod_students_cross_val(train, ref, dictio, topic_mod="LSA", 
+                                 counting="binary")
+    topic_mod_students_cross_val(train, ref, dictio, topic_mod="LSA", 
+                                 counting="TF-IDF")
     
     # Topic models: train on Psychology book
-    LDA_book_raw = topic_mod_book(df_book, train, ref, topic_mod="LDA", counting="raw") 
-    LDA_book_binary = topic_mod_book(df_book, train, ref, topic_mod="LDA", counting="binary") 
-    LSA_book_raw = topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="raw") 
-    LSA_book_binary = topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="binary") 
-    LSA_book_tfidf = topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="TF-IDF") # TODO: Python crashes when this line is run. No error message.
+    LDA_book_raw = topic_mod_book(df_book, train, ref, topic_mod="LDA", 
+                                  counting="raw") 
+    LDA_book_binary = topic_mod_book(df_book, train, ref, topic_mod="LDA", 
+                                     counting="binary") 
+    LSA_book_raw = topic_mod_book(df_book, train, ref, topic_mod="LSA", 
+                                  counting="raw") 
+    LSA_book_binary = topic_mod_book(df_book, train, ref, topic_mod="LSA", 
+                                     counting="binary") 
+#    LSA_book_tfidf = topic_mod_book(df_book, train, ref, topic_mod="LSA", 
+#                                    counting="TF-IDF") # TODO: Python crashes when this line is run. No error message.
     
     # Testing
     print("\nRunning on the test data\n")
         
     # Baseline models
     scores_baseline = sim_baseline(test, ref, counting="raw")
-    apply_baseline(scores_baseline, test, ref, counting="raw", mapping = "times_ten")
+    apply_baseline(scores_baseline, test, ref, counting="raw", 
+                   mapping = "times_ten")
     
     scores_baseline = sim_baseline(test, ref, counting="binary")
-    apply_baseline(scores_baseline, test, ref, counting="binary", mapping = "times_ten")
+    apply_baseline(scores_baseline, test, ref, counting="binary", 
+                   mapping = "times_ten")
  
     scores_baseline = sim_baseline_tfidf(test, ref)
-    apply_baseline(scores_baseline, test, ref, counting="TF-IDF", mapping = "times_ten")
+    apply_baseline(scores_baseline, test, ref, counting="TF-IDF", 
+                   mapping = "times_ten")
         
     ### Running all models in a loop, write to file
       
@@ -880,7 +896,8 @@ if __name__ == "__main__":
         for mapp in mapping:
             
             if not count_method == "TF-IDF":
-                scores_baseline = sim_baseline(train, ref, counting=count_method)
+                scores_baseline = sim_baseline(train, ref, 
+                                               counting=count_method)
             elif count_method == "TF-IDF":
                 scores_baseline = sim_baseline_tfidf(train, ref)
             
