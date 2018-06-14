@@ -32,7 +32,8 @@ from statistics import mode
 random.seed(2017)
 
 # Set working directory
-os.chdir("U:/GitHub/AutomaticGrading")
+wd = "U:/GitHub/AutomaticGrading"
+os.chdir(wd)
 
 
 ### ------------------
@@ -770,8 +771,7 @@ def evaluate(pred_grades, real_grades, model, counting):
 
 
 def setup_outfile():
-    #outfile = "C:/Users/johan/Dropbox/PhD/Courses/Text and multimedia mining/Project/Results.txt"
-    outfile = "D:/Dropbox2/Dropbox/PhD/Courses/Text and multimedia mining/Project/Results2.txt"
+    outfile = os.path.join(wd, "results.txt")
     headers = ["Model", "Counting", "TrainOrTest", "TrainingData", "Mapping", "SpellingCorrection", "Pearson", "SigPearson", "Spearman", "SigSpearman"]
     headers2 = "\t".join(headers)
     f = open(outfile, 'w') 
