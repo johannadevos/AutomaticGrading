@@ -847,7 +847,7 @@ if __name__ == "__main__":
     LDA_book_binary = topic_mod_book(df_book, train, ref, topic_mod="LDA", counting="binary") 
     LSA_book_raw = topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="raw") 
     LSA_book_binary = topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="binary") 
-    #LSA_book_tfidf = topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="TF-IDF") # NOT WORKING, needs bug fixing
+    LSA_book_tfidf = topic_mod_book(df_book, train, ref, topic_mod="LSA", counting="TF-IDF") # TODO: Python crashes when this line is run. No error message.
     
     # Testing
     print("\nRunning on the test data\n")
