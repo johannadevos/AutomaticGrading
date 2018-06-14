@@ -417,6 +417,9 @@ def topic_mod_students_cross_val(train, ref, dictio, topic_mod="LSA", counting="
     # Get index of Grade column in dataframe
     index_Grade = train.columns.get_loc("Grade")
     
+    # Set grade type from 'object' to 'int'
+    train.Grade = train.Grade.astype('int')
+    
     # Create empty list to store the correlations of the k folds
     all_pearson = []
     all_sig_pearson = []
