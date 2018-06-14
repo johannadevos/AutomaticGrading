@@ -32,8 +32,7 @@ from statistics import mode
 random.seed(2017)
 
 # Set working directory
-#os.chdir("C:/Users/johan/Documents/GitHub/AutomaticGrading")
-os.chdir("C:/Users/U908153/Desktop/GitHub/AutomaticGrading")
+os.chdir("U:/GitHub/AutomaticGrading")
 
 
 ### ------------------
@@ -794,11 +793,11 @@ def save_to_file(info, outfile):
 if __name__ == "__main__":
     
     # Read and prepare student data
-    ref_answer_raw = open_file('referenceAnswer.txt') # Read reference answer
+    ref_answer_raw = open_file('data/referenceAnswer.txt') # Read reference answer
     ref_answer = preprocess(ref_answer_raw) # Preprocess reference answer
-    stud_answers_raw = open_file('studentAnswersCorrected.txt') # Read student answers
+    stud_answers_raw = open_file('data/studentAnswersCorrected.txt') # Read student answers
     spelling_correction = "Yes"
-    #stud_answers_raw = open_file('studentAnswersUncorrected.txt') # Read student answers
+    #stud_answers_raw = open_file('data/studentAnswersUncorrected.txt') # Read student answers
     #spelling_correction = "No"
     stud_answers = preprocess(stud_answers_raw) # Preprocess student answers
     df, cols = create_df(stud_answers) # Create dataframe of student answers
@@ -809,7 +808,7 @@ if __name__ == "__main__":
     histogram(train) # Explore the distribution of the grades
     
     # Read and prepare Psychology book
-    book_raw = open_file('psyBookChapter10.txt') # Open book
+    book_raw = open_file('data/psyBookChapter10.txt') # Open book
     book_raw = book_raw[:5000] # To try new things out without having to work with a big dataset
     book = book_raw.replace("\n", " ") # Remove white lines
     book = book.replace(chr(0x00AD), "") # Remove soft hyphens
