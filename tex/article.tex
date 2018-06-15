@@ -220,58 +220,60 @@ The important question to close with is of course whether the models in this stu
 \section{Appendix}
 \begin{table}[]
 	\centering
-	\caption{My caption}
+	\footnotesize
+	\caption{All models. The best correlation(s) per model type is/are highlighted in boldface.}
 	\label{my-label}
 	\begin{tabular}{lllllll}
-		model type & training data type & counting method & spelling correction & mapping algorithm & rs   & significance \\
-		baseline   & none               & raw             & yes                 & x10               & 0.38 & 0.0005       \\
-		baseline   & none               & raw             & no                  & x10               & 0.37 & 0.0006       \\
-		baseline   & none               & raw             & yes                 & no 1 or 9         & 0.38 & 0.0005       \\
-		baseline   & none               & raw             & no                  & no 1 or 9         & 0.37 & 0.0006       \\
-		baseline   & none               & binary          & yes                 & x10               & 0.33 & 0.0025       \\
-		baseline   & none               & binary          & no                  & x10               & 0.36 & 0.0010       \\
-		baseline   & none               & binary          & yes                 & no 1 or 9         & 0.33 & 0.0029       \\
-		baseline   & none               & binary          & no                  & no 1 or 9         & 0.35 & 0.0013       \\
-		baseline   & none               & TF-IDF          & yes                 & x10               & 0.34 & 0.0022       \\
-		baseline   & none               & TF-IDF          & no                  & x10               & 0.33 & 0.0029       \\
-		baseline   & none               & TF-IDF          & yes                 & no 1 or 9         & 0.27 & 0.0167       \\
-		baseline   & none               & TF-IDF          & no                  & no 1 or 9         & 0.25 & 0.0244       \\
-		LDA        & student answers    & raw             & yes                 & x10               & 0.28 & 0.0100       \\
-		LDA        & student answers    & raw             & no                  & x10               & 0.21 & 0.0547       \\
-		LDA        & student answers    & raw             & yes                 & no 1 or 9         & 0.43 & 0.0001       \\
-		LDA        & student answers    & raw             & no                  & no 1 or 9         & 0.47 & 0.0000       \\
-		LDA        & student answers    & binary          & yes                 & x10               & 0.26 & 0.0200       \\
-		LDA        & student answers    & binary          & no                  & x10               & 0.29 & 0.0085       \\
-		LDA        & student answers    & binary          & yes                 & no 1 or 9         & 0.45 & 0.0000       \\
-		LDA        & student answers    & binary          & no                  & no 1 or 9         & 0.45 & 0.0000       \\
-		LDA        & textbook chapter   & raw             & yes                 & x10               & 0.44 & 0.0000       \\
-		LDA        & textbook chapter   & raw             & no                  & x10               & 0.45 & 0.0000       \\
-		LDA        & textbook chapter   & raw             & yes                 & no 1 or 9         & 0.27 & 0.0134       \\
-		LDA        & textbook chapter   & raw             & no                  & no 1 or 9         & 0.48 & 0.0000       \\
-		LDA        & textbook chapter   & binary          & yes                 & x10               & 0.52 & 0.0000       \\
-		LDA        & textbook chapter   & binary          & no                  & x10               & 0.39 & 0.0004       \\
-		LDA        & textbook chapter   & binary          & yes                 & no 1 or 9         & 0.30 & 0.0066       \\
-		LDA        & textbook chapter   & binary          & no                  & no 1 or 9         & 0.51 & 0.0000       \\
-		LSA        & student answers    & raw             & yes                 & x10               & 0.36 & 0.0011       \\
-		LSA        & student answers    & raw             & no                  & x10               & 0.34 & 0.0021       \\
-		LSA        & student answers    & raw             & yes                 & no 1 or 9         & 0.36 & 0.0011       \\
-		LSA        & student answers    & raw             & no                  & no 1 or 9         & 0.34 & 0.0021       \\
-		LSA        & student answers    & binary          & yes                 & x10               & 0.40 & 0.0003       \\
-		LSA        & student answers    & binary          & no                  & x10               & 0.42 & 0.0001       \\
-		LSA        & student answers    & binary          & yes                 & no 1 or 9         & 0.40 & 0.0003       \\
-		LSA        & student answers    & binary          & no                  & no 1 or 9         & 0.42 & 0.0001       \\
-		LSA        & student answers    & TF-IDF          & yes                 & x10               & 0.41 & 0.0001       \\
-		LSA        & student answers    & TF-IDF          & no                  & x10               & 0.40 & 0.0002       \\
-		LSA        & student answers    & TF-IDF          & yes                 & no 1 or 9         & 0.41 & 0.0001       \\
-		LSA        & student answers    & TF-IDF          & no                  & no 1 or 9         & 0.40 & 0.0002       \\
-		LSA        & textbook chapter   & raw             & yes                 & x10               & 0.32 & 0.0034       \\
-		LSA        & textbook chapter   & raw             & no                  & x10               & 0.33 & 0.0029       \\
-		LSA        & textbook chapter   & raw             & yes                 & no 1 or 9         & 0.33 & 0.0027       \\
-		LSA        & textbook chapter   & raw             & no                  & no 1 or 9         & 0.32 & 0.0033       \\
-		LSA        & textbook chapter   & binary          & yes                 & x10               & 0.29 & 0.0083       \\
-		LSA        & textbook chapter   & binary          & no                  & x10               & 0.32 & 0.0040       \\
-		LSA        & textbook chapter   & binary          & yes                 & no 1 or 9         & 0.29 & 0.0081       \\
-		LSA        & textbook chapter   & binary          & no                  & no 1 or 9         & 0.32 & 0.0039      
+		\hline model type & training data type & counting method & spelling correction & mapping algorithm & $\textit{r}_s$   & \textit{p} \\
+		\hline baseline   & none               & raw             & yes                 & x10               & \textbf{.38} & .0005       \\
+		baseline   & none               & raw             & no                  & x10               & .37 & .0006       \\
+		baseline   & none               & raw             & yes                 & no 1 or 9         & \textbf{.38} & .0005       \\
+		baseline   & none               & raw             & no                  & no 1 or 9         & .37 & .0006       \\
+		baseline   & none               & binary          & yes                 & x10               & .33 & .0025       \\
+		baseline   & none               & binary          & no                  & x10               & .36 & .0010       \\
+		baseline   & none               & binary          & yes                 & no 1 or 9         & .33 & .0029       \\
+		baseline   & none               & binary          & no                  & no 1 or 9         & .35 & .0013       \\
+		baseline   & none               & TF-IDF          & yes                 & x10               & .34 & .0022       \\
+		baseline   & none               & TF-IDF          & no                  & x10               & .33 & .0029       \\
+		baseline   & none               & TF-IDF          & yes                 & no 1 or 9         & .27 & .0167       \\
+		baseline   & none               & TF-IDF          & no                  & no 1 or 9         & .25 & .0244       \\
+		LDA        & student answers    & raw             & yes                 & x10               & .28 & .0100       \\
+		LDA        & student answers    & raw             & no                  & x10               & .21 & .0547       \\
+		LDA        & student answers    & raw             & yes                 & no 1 or 9         & .43 & $<$ .0001       \\
+		LDA        & student answers    & raw             & no                  & no 1 or 9         & .47 & $<$ .0001       \\
+		LDA        & student answers    & binary          & yes                 & x10               & .26 & .0200       \\
+		LDA        & student answers    & binary          & no                  & x10               & .29 & .0085       \\
+		LDA        & student answers    & binary          & yes                 & no 1 or 9         & .45 & $<$ .0001       \\
+		LDA        & student answers    & binary          & no                  & no 1 or 9         & .45 & $<$ .0001       \\
+		LDA        & textbook chapter   & raw             & yes                 & x10               & .44 & $<$ .0001       \\
+		LDA        & textbook chapter   & raw             & no                  & x10               & .45 & $<$ .0001       \\
+		LDA        & textbook chapter   & raw             & yes                 & no 1 or 9         & .27 & .0134       \\
+		LDA        & textbook chapter   & raw             & no                  & no 1 or 9         & .48 & $<$ .0001       \\
+		LDA        & textbook chapter   & binary          & yes                 & x10               & \textbf{.52} & $<$ .0001       \\
+		LDA        & textbook chapter   & binary          & no                  & x10               & .39 & .0004       \\
+		LDA        & textbook chapter   & binary          & yes                 & no 1 or 9         & .30 & .0066       \\
+		LDA        & textbook chapter   & binary          & no                  & no 1 or 9         & .51 & $<$ .0001       \\
+		LSA        & student answers    & raw             & yes                 & x10               & .36 & .0011       \\
+		LSA        & student answers    & raw             & no                  & x10               & .34 & .0021       \\
+		LSA        & student answers    & raw             & yes                 & no 1 or 9         & .36 & .0011       \\
+		LSA        & student answers    & raw             & no                  & no 1 or 9         & .34 & .0021       \\
+		LSA        & student answers    & binary          & yes                 & x10               & .40 & .0003       \\
+		LSA        & student answers    & binary          & no                  & x10               & \textbf{.42} & $<$ .0001       \\
+		LSA        & student answers    & binary          & yes                 & no 1 or 9         & .40 & .0003       \\
+		LSA        & student answers    & binary          & no                  & no 1 or 9         & \textbf{.42} & $<$ .0001       \\
+		LSA        & student answers    & TF-IDF          & yes                 & x10               & .41 & .0001       \\
+		LSA        & student answers    & TF-IDF          & no                  & x10               & .40 & .0002       \\
+		LSA        & student answers    & TF-IDF          & yes                 & no 1 or 9         & .41 & .0001       \\
+		LSA        & student answers    & TF-IDF          & no                  & no 1 or 9         & .40 & .0002       \\
+		LSA        & textbook chapter   & raw             & yes                 & x10               & .32 & .0034       \\
+		LSA        & textbook chapter   & raw             & no                  & x10               & .33 & .0029       \\
+		LSA        & textbook chapter   & raw             & yes                 & no 1 or 9         & .33 & .0027       \\
+		LSA        & textbook chapter   & raw             & no                  & no 1 or 9         & .32 & .0033       \\
+		LSA        & textbook chapter   & binary          & yes                 & x10               & .29 & .0083       \\
+		LSA        & textbook chapter   & binary          & no                  & x10               & .32 & .0040       \\
+		LSA        & textbook chapter   & binary          & yes                 & no 1 or 9         & .29 & .0081       \\
+		LSA        & textbook chapter   & binary          & no                  & no 1 or 9         & .32 & .0039 \\
+		\hline     
 	\end{tabular}
 \end{table}
 
