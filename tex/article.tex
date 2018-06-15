@@ -156,34 +156,34 @@ As can be seen from Table \ref{table1}, on average, the LDA models performed bes
 \end{table}
 
 \subsection{Best-performing individual models}
-As explained in section \ref{sec:averageoutcomes}, all cells in Table \ref{table1} represent average outcomes.
+As explained in Section \ref{sec:averageoutcomes}, all cells in Table \ref{table1} represent average outcomes.
 
-The best-performing LDA model achieved a correlation of $\textit{r}_s$ = .52. It was trained on the textbook chapter, used binary counting, was spelling-corrected and used the x10 mapping algorithm. The scatterplot of predicted and assigned grades is shown in Figure 2.
+The best-performing LDA model achieved a correlation of $\textit{r}_s$ = .52. It was trained on the textbook chapter, used binary counting, was spelling-corrected and used the x10 mapping algorithm. The scatterplot of predicted and assigned grades is shown in Figure \ref{lda}.
 
-\begin{figure}
+\begin{figure}[h]
 \centering
 \includegraphics[width=0.5\linewidth]{"Best LDA model"}
 \caption{Grades predicted by the best LDA model.}
 \label{lda}
 \end{figure}
 
-\begin{figure}
-	\centering
-	\includegraphics[width=0.5\linewidth]{"Best LSA model"}
-	\caption{Grades predicted by the best LSA model.}
-	\label{lsa}
+The best-performing LSA model achieved a correlation of $\textit{r}_s$ = .42. It was trained on non-spelling-corrected student answers and used binary counting. The mapping algorithm was not relevant, as no 1s and 9s were predicted to begin with. Figure \ref{lsa} shows the scatterplot for this model.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.5\linewidth]{"Best LSA model"}
+\caption{Grades predicted by the best LSA model.}
+\label{lsa}
 \end{figure}
 
-\begin{figure}
-	\centering
-	\includegraphics[width=0.5\linewidth]{"Best baseline model"}
-	\caption{Grades predicted by the best baseline model.}
-	\label{baseline}
+Both of these models outperformed the best baseline model, which achieved a correlation of $\textit{r}_s$ = .38, using raw counts and spelling-corrected data. As in the LSA model, the mapping algorithm was irrelevant. The scatterplot is shown in Figure \ref{baseline}.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.5\linewidth]{"Best baseline model"}
+\caption{Grades predicted by the best baseline model.}
+\label{baseline}
 \end{figure}
-
-The best-performing LSA model achieved a correlation of $\textit{r}_s$ = .42. It was trained on non-spelling-corrected student answers and used binary counting. The mapping algorithm was not relevant, as no 1s and 9s were predicted to begin with. Figure 3 shows the scatterplot for this model.
-
-Both of these models outperformed the best baseline model, which achieved a correlation of $\textit{r}_s$ = .38, using raw counts and spelling-corrected data. As in the LSA model, the mapping algorithm was irrelevant. The scatterplot is shown in Figure 4.
 
 These three highest correlations all were significant (all \textit{p} $<$ .001).
 
@@ -217,8 +217,8 @@ The important question to close with is of course whether the models in this stu
 \bibliographystyle{clin} 
 \bibliography{bibliography} 
 
-\section{Appendix}
-\begin{table}[]
+\section*{Appendix}
+\begin{table}[h]
 	\centering
 	\footnotesize
 	\caption{All models. The best correlation(s) per model type is/are highlighted in boldface.}
