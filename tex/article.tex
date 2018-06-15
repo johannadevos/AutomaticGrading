@@ -129,36 +129,11 @@ The LSA models on average did best with 100 SVs ($\textit{r}_s$ = .38) when bein
 
 Thus, in training the final topic models, I set the number of topics or SVs to the above-reported numbers that had yielded the best outcomes on the two types of training data.
 
-\subsection{Outcomes per model type and other variables}
+\subsection{Models}
 \label{sec:averageoutcomes}
-Table \ref{table1} shows the average correlation that was obtained on the test data between predicted and lecturer-assigned grades, for each model type. The first column contains the four other variables under investigation. For each variable, the results in columns 3-5 are averaged over the levels (column 2) of the other three variables. For example, the results for the two types of training data (student answers vs. textbook chapter) are averaged over the different levels of counting method, spelling correction and mapping algorithm. It is possible that there could be (an) interaction(s) between the variables, but that was outside the scope of this study.
 
-As can be seen from Table \ref{table1}, on average, the LDA models performed best, followed by the LSA models. The baseline models on averaged performed worst.
-
-\begin{table}
-\caption{Correlations for all model types and variables.}
-\label{table1}
-\centering
-\begin{tabular}{lllll}
-	\hline  &  & \textbf{Baseline} & \textbf{LDA} & \textbf{LSA} \\ 
-	\hline  Training data & Student answers & N/A & .36 & .39 \\ 
-						 & Textbook chapter & N/A & .42 & .32 \\ 
-	\hline  Counting method & Raw & .38 & .38 & .34 \\ 
-							& Binary & .34 & .40 & .35 \\ 
-							& TF-IDF & .30 & N/A & .41 \\ 
-	\hline  Spelling correction & Yes & .34 & .37 & .36 \\ 
-								& No & .34 & .41 & .36 \\ 
-	\hline  Mapping algorithm & x10 & .35 & .36 & .36 \\ 
-							  & No 1 or 9 & .33 & .42 & .36 \\ 
-	\hline  \textbf{Overall} &  & \textbf{.34} & \textbf{.39} & \textbf{.36} \\ 
-	\hline 
-	\end{tabular} 
-\end{table}
-
-\subsection{Best-performing individual models}
-As explained in Section \ref{sec:averageoutcomes}, all cells in Table \ref{table1} represent average outcomes.
-
-The best-performing LDA model achieved a correlation of $\textit{r}_s$ = .52. It was trained on the textbook chapter, used binary counting, was spelling-corrected and used the x10 mapping algorithm. The scatterplot of predicted and assigned grades is shown in Figure \ref{lda}.
+\subsubsection{Best-performing models}
+The outcomes for all 48 individual models are listed in Table \ref{all-models} in the Appendix at the end of this article. The best-performing LDA model achieved a correlation of $\textit{r}_s$ = .52. It was trained on the textbook chapter, used binary counting, was spelling-corrected and used the x10 mapping algorithm. The scatterplot of predicted and assigned grades is shown in Figure \ref{lda}.
 
 \begin{figure}[h]
 \centering
@@ -186,6 +161,37 @@ Both of these models outperformed the best baseline model, which achieved a corr
 \end{figure}
 
 These three highest correlations all were significant (all \textit{p} $<$ .001).
+
+%\subsection{Best-performing individual models}
+%As explained in Section \ref{sec:averageoutcomes}, all cells in Table \ref{table1} represent average outcomes.
+
+\subsubsection{Outcomes per variable}
+In the previous section, I focused on individual models. In this section, I averaged over the outcomes of the individual models as reported in the Appendix, in order to investigate the average impact of model type, training data type, counting method, spelling correction, and the mapping algorithm. 
+
+Table \ref{table1} shows the average correlation that was obtained on the test data between predicted and lecturer-assigned grades, for each model type. The first column contains the four other variables under investigation. For each variable, the results in columns 3-5 are averaged over the levels (column 2) of the other three variables. For example, the results for the two types of training data (student answers versus textbook chapter) are averaged over the different levels of counting method, spelling correction and mapping algorithm.\footnote{Because the LSA models could not be trained with TF-IDF when using the textbook data (see Section \ref{sec:training}), that cell specifically contains the correlation when using student answers as training data. In all other cells in the LSA column as well, this specific combination of variable levels is missing from the average.) } It is possible that there could be (an) interaction(s) between the variables, but that was outside the scope of this study.
+
+As can be seen from Table \ref{table1}, on average, the LDA models performed best, followed by the LSA models. The baseline models on averaged performed worst. Which training data type yielded the best models, seemed to depend on model type: LSA models on average yielded higher correlations when being trained on student answers, whereas LDA models did better when trained on the textbook chapter.
+
+\begin{table}[h]
+	\caption{Correlations for all model types and other variables.}
+	\label{table1}
+	\centering
+	\begin{tabular}{lllll}
+		\hline  &  & \textbf{Baseline} & \textbf{LDA} & \textbf{LSA} \\ 
+		\hline  Training data & Student answers & N/A & .36 & .39 \\ 
+		& Textbook chapter & N/A & .42 & .32 \\ 
+		\hline  Counting method & Raw & .38 & .38 & .34 \\ 
+		& Binary & .34 & .40 & .35 \\ 
+		& TF-IDF & .30 & N/A & .41 \\ 
+		\hline  Spelling correction & Yes & .34 & .37 & .36 \\ 
+		& No & .34 & .41 & .36 \\ 
+		\hline  Mapping algorithm & x10 & .35 & .36 & .36 \\ 
+		& No 1 or 9 & .33 & .42 & .36 \\ 
+		\hline  \textbf{Overall} &  & \textbf{.34} & \textbf{.39} & \textbf{.36} \\ 
+		\hline 
+	\end{tabular} 
+\end{table}
+
 
 \section{Discussion}
 In this study I compared three types of vector space models for automatically predicting exam grades. The vector space models that used topics (LDA) or singular values (LSA) as their dimensions both outperformed the baseline vector space models that used vocabulary counts as their dimensions. The likely explanation for this is that LDA and LSA models compare documents at the semantic level, rather than looking for exact vocabulary matches \cite{kakkonen2008}. Notably, even in the baseline models the correlation between predicted and lecturer-assigned grades was statistically significant.
@@ -222,7 +228,7 @@ The important question to close with is of course whether the models in this stu
 	\centering
 	\footnotesize
 	\caption{All models. The best correlation(s) per model type is/are highlighted in boldface.}
-	\label{my-label}
+	\label{all-models}
 	\begin{tabular}{lllllll}
 		\hline model type & training data type & counting method & spelling correction & mapping algorithm & $\textit{r}_s$   & \textit{p} \\
 		\hline baseline   & none               & raw             & yes                 & x10               & \textbf{.38} & .0005       \\
