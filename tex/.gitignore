@@ -1,0 +1,16 @@
+# See this answer: https://stackoverflow.com/a/932982
+
+# Ignore everything in this directory
+*
+# Except this file
+!.gitignore
+!article.tex
+!Best baseline model.png
+!Best LDA model.png
+!Best LSA model.png
+!bibliography.bib
+!clin.bst
+!clin.sty
+!harvard.sty
+!Histogram of grades.png
+
