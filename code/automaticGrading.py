@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd
+from pathlib import Path
 import random
 import re
 import sklearn.model_selection
@@ -32,8 +33,15 @@ from statistics import mode
 random.seed(2017)
 
 # Set working directory
-wd = "U:/GitHub/AutomaticGrading"
-os.chdir(wd)
+def _get_current_file_dir() -> Path:
+    """Returns the directory of the script."""
+    try:
+        return Path(os.path.realpath(__file__)).parent
+    except(NameError):
+        return Path(os.getcwd())
+
+_PROJECT_ROOT = _get_current_file_dir() / '..'
+os.chdir(_PROJECT_ROOT)
 
 
 ### ------------------
