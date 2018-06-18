@@ -779,7 +779,7 @@ def evaluate(pred_grades, real_grades, model, counting):
 
 
 def setup_outfile():
-    outfile = os.path.join(wd, "results.txt")
+    outfile = os.path.join(_PROJECT_ROOT, "results.txt")
     headers = ["Model", "Counting", "TrainOrTest", "TrainingData", "Mapping", "SpellingCorrection", "Pearson", "SigPearson", "Spearman", "SigSpearman"]
     headers2 = "\t".join(headers)
     f = open(outfile, 'w') 
