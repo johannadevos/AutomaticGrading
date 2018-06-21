@@ -68,9 +68,25 @@ The current study is motivated by the scarcity of studies on the use of vector s
 \section{Approach}
 
 \subsection{Data}
-The core dataset consisted of 402 students' written answers to a first year psychology exam question from Radboud University. The question was: ``Discuss Whorf's language theory. Include the following terms in your answer: Strong and weak variations on the theory." All answers were accompanied by the grade that the lecturer had assigned to that answer. Permission to work with these data was obtained through the ethical commission of the Social Science faculty. The student answers were used for two purposes: to train topic models (on the training set), and to predict grades from (on the test set). The total number of words was 23467.
+The core dataset consisted of 402 students' written answers to a first year psychology exam question from Radboud University. Permission to work with these data was obtained through the ethical commission of the Social Science faculty. The question was: 
 
-As described in the introduction, I also used another text source to train the topic models. This was chapter 10 from \citeasnoun{gleitman2011}, the introductory psychology textbook that the students used. Chapter 10 is the chapter in which Whorf's language theory is explained. The chapter consisted of 1217 sentences (acting as documents in the document-term matrix) and a total of 15096 words.
+\begin{quote}
+	``Discuss Whorf's language theory. Include the following terms in your answer: Strong and weak variations on the theory." 
+\end{quote}
+
+All answers were accompanied by the grade that the lecturer had assigned to that answer. The following is an example of a fully correct answer, which was awarded 10 points by the lecturer (i.e., the maximum score): 
+
+\begin{quote}
+``The (Sapir)-Whorfian hypothesis tries to answer the question whether people with different languages think differently. It's the proposal that the language one speaks heavily influences and determines the thoughts we are able to think and the concepts of our thoughts. The weak form, on which most language experts agree, is the proposal that when a language contains many refined thoughts and concepts of thoughts, one is thus able to express oneself in a more sophisticated way. In other words: if you know a lot of words, you can express yourself in an adequate and differentiated way. A good example for this is the tribe of the Inuit who have a very refined concept for the word ``snow" as the environment shaped their language. Thus, they can speak in a very sophisticated way about snow. The strong variation of this hypothesis says that language really limits our thoughts or if you can't speak well, it limits you."
+\end{quote}
+
+The next answer is an example of an answer that the lecturer had given 0 points (i.e., the lowest possible score):
+
+\begin{quote}
+	``Whorf's language theory says that learning is based on language. The strong Whorf language theory claims that you can only learn new things if there is a word in your language for the learned thing. The weak Whorf language theory says that it is easier to learns something when there is an existing word for it but it is still possible to learn something even though you do not have a word for it."
+\end{quote}
+
+The student answers were used for two purposes: to train topic models (on the training set), and to predict grades from (on the test set). The total number of words was 23467. As described in the introduction, I also used another text source to train the topic models. This was chapter 10 from \citeasnoun{gleitman2011}, the introductory psychology textbook that the students used. Chapter 10 is the chapter in which Whorf's language theory is explained. The chapter consisted of 1217 sentences (acting as documents in the document-term matrix) and a total of 15096 words.
 
 The reference answer was based on a rubric that was provided by the lecturer, in combination with the definition of Whorf's language theory as given in \citeasnoun{gleitman2011}. It consisted of 59 words in 7 sentences.
 
@@ -89,23 +105,23 @@ I compared \textsc{term frequency-inverse document frequency} (TF-IDF) with \tex
 \label{sec:spelling}
 If no spelling correction were to be applied, misspelled words would get their own vocabulary ID (e.g., `critizing' would be different from `criticizing'), leading to an unnecessary increase in the dimensionality of the dataset. The correct entry `criticizing' would have lower counts, and therefore might be assigned a less important role in the topic models than it should have had in reality. Therefore, I expected better outcomes when the data were spelling-corrected.
 
-\begin{wrapfigure}{r}{5.5cm}
-	\vspace{-15pt}
-	\includegraphics[width=6cm]{"Histogram of grades"}
-	\caption{Frequency distribution of the grades that were assigned by the lecturer (train set only).}
-	\label{fig:histogram}
-	\vspace{-45pt}
-\end{wrapfigure} 
+%\begin{wrapfigure}{r}{5.5cm}
+%	\vspace{-15pt}
+%	\includegraphics[width=6cm]{"Histogram of grades"}
+%	\caption{Frequency distribution of the grades that were assigned by the lecturer (train set only).}
+%	\label{fig:histogram}
+%	\vspace{-45pt}
+%\end{wrapfigure} 
 
 \subsubsection{Mapping algorithm}
 Semantic similarity between the student answer and the reference answer was measured in terms of cosine similarity, which always lies between 0 and 1. The most straightforward way to transform this value into a grade is to multiply it by 10. I will call this mapping algorithm `\textsc{x10}'. However, Figure \ref{fig:histogram} shows that the grades of 1 and 9 were almost never assigned by the lecturer, but 0 and 10 quite often. Therefore, to try to improve prediction accuracy, the second mapping algorithm first multiplied the cosine similarity by 10, but subsequently mapped any 1s to 0, and any 9s to 10. I will call this mapping algorithm `\textsc{no 1 or 9}'.
 
-%\begin{figure}[h]
-%	\centering
-%	\includegraphics[width=0.5\linewidth]{"Histogram of grades"}
-%	\caption{Frequency distribution of the grades that were assigned by the lecturer (train split only).}
-%	\label{fig:histogram}
-%\end{figure} 
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.5\linewidth]{"Histogram of grades"}
+	\caption{Frequency distribution of the grades that were assigned by the lecturer (train set only).}
+	\label{fig:histogram}
+\end{figure} 
 
 \subsection{Implementation}
 
@@ -302,9 +318,5 @@ The source code and data to replicate the analysis can be found on GitHub: \url{
 		\hline     
 	\end{tabular}
 \end{table}
-
-
-
-
 
 \end{document}
