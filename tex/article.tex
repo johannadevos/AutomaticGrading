@@ -68,7 +68,7 @@ The current study is motivated by the scarcity of studies on the use of vector s
 \section{Approach}
 
 \subsection{Data}
-The core dataset consisted of 402 students' written answers to a first year psychology exam question from Radboud University. Permission to work with these data was obtained through the ethical commission of the Social Science faculty. The question was: 
+The core dataset consisted of 402 students' written answers to a first year psychology exam question from Radboud University. The question was: 
 
 \begin{quote}
 	``Discuss Whorf's language theory. Include the following terms in your answer: Strong and weak variations on the theory." 
@@ -89,6 +89,9 @@ The next answer is an example of an answer that the lecturer had given zero poin
 The student answers were used for two purposes: to train topic models (on the training set), and to predict grades from (on the test set). The total number of words was 23467. As described in the introduction, I also used another text source to train the topic models. This was chapter 10 from \citeasnoun{gleitman2011}, the introductory psychology textbook that the students used. Chapter 10 is the chapter in which Whorf's language theory is explained. The chapter consisted of 1217 sentences (acting as documents in the document-term matrix) and a total of 15096 words.
 
 The reference answer was based on a rubric that was provided by the lecturer, in combination with the definition of Whorf's language theory as given in \citeasnoun{gleitman2011}. It consisted of 59 words in 7 sentences.
+
+\subsection{Ethics}
+Permission to conduct this study was obtained through the ethical commission of the Social Science faculty at Radboud University, Nijmegen. The ethical commission allowed me to contact all first-year Psychology students and ask them whether they wanted to opt out of having their data be used in this study. Four students opted out. 
 
 \subsection{Preprocessing}
 Pre-processing of the data (the student answers and the textbook chapter) was done in Python (version 3.6) with the Natural Language Toolkit (NLTK) (version 3.2.4) \cite{bird2009}. This included tokenization, lemmatization and stop word removal. Manual spelling correction was applied to the student answers (see section \ref{sec:spelling}).
@@ -167,6 +170,7 @@ Bigger dots represent more data points.
 \label{lda}
 \end{figure}
 
+\newpage
 The best-performing LSA model achieved a correlation of $\textit{r}_s$ = .42. It was trained on \textsc{non-spelling-corrected} \textsc{student answers} and used \textsc{binary} counting. The mapping algorithm was not relevant, as no 1s and 9s were predicted to begin with. Figure \ref{lsa} shows the scatterplot for this model.
 
 \begin{figure}[h]
@@ -216,14 +220,14 @@ As can be seen from Table \ref{table1}, on average, the LDA models performed bes
 
 %\newpage
 \section{Discussion}
-In this study I compared three types of vector space models for automatically predicting exam grades. The vector space models that used topics (LDA) or singular values (LSA) as their dimensions both outperformed the \textsc{baseline} vector space models that used vocabulary counts as their dimensions. The likely explanation for this is that LDA and LSA models compare documents at the semantic level, rather than looking for exact vocabulary matches \cite{kakkonen2008}. Notably, even in all of the baseline models the correlation between predicted and lecturer-assigned grades was statistically significant (see Table \ref{all-models}).
+In this study I compared three types of vector space models for automatically predicting exam grades. The vector space models that used topics (LDA) or singular values (LSA) as their dimensions both outperformed the \textsc{baseline} vector space models that used vocabulary counts as their dimensions. The likely explanation for this is that LDA and LSA models compare documents at the semantic level, rather than looking for exact vocabulary matches \cite{kakkonen2008}. Notably, even in all of the baseline models the correlation between predicted and lecturer-assigned grades was statistically significant (see Table \ref{all-models} in the Appendix).
 
 It should be noted that in the results section as well as in the remainder of this discussion, I have made comparisons between models that differed in their dimensionality. For example, the LDA models contained 2 topics when being trained on the \textsc{student answers}, but 20 when being trained on the \textsc{textbook chapter}. These values were chosen because a grid search had shown that they resulted in the most accurate models. However, technically speaking, the outcomes of models that differ in their dimensionality cannot directly be compared, because vectors with lower dimensionalities by default are expected to be more similar. Still, this does not mean that models with lower dimensionalities will \textit{automatically} make the best predictions, which can also be seen from the finding that the best-scoring model was an LDA model with 20 topics. Because I wanted to find the best possible vector space for doing automatic grading, I opted to work with models of different dimensionalities. The readers should keep this in mind when interpreting the results.
 
 \subsection{LDA versus LSA, as a function of training data type}
 Looking back on the literature, \citeasnoun{kakkonen2008} asked whether their LSA models perhaps outperformed their LDA models because they were trained on a small set of student answers only. My results support this explanation: when training on the \textsc{student answers}, LSA outperformed LDA, but it was the other way around when using a more diverse document collection (i.e., sentences in a psychology \textsc{textbook chapter}). This raises the question as to why the two types of training data affected the topic models differently (while the size of the training sets was similar).
 
-One explanation can be sought in the optimal number of topics for the LDA models that resulted from the grid search: two when training on \textsc{student answers}, and 20 when training on the \textsc{textbook chapter}. Two is the lowest possible number of topics that an LDA model can have. It is not so unexpected that the grid search yielded this as the best value when training on \textsc{student answers}, as in essence the student answers all revolved around the same topic (i.e., Whorf's language theory). As a result, however, the resulting vector space models only had two dimensions, which does not allow very fine distinctions between answers of different qualities. When visually inspecting the scatter plots of the outcomes of the LDA models with 2 topics trained on \textsc{student answers}, it can be seen that these models predict a 10 for many students, which results in relatively low correlations. As an example, the outcomes of one such model are printed as Figure \ref{lda-predicts-tens} below. For this particular model, $\textit{r}_s$ = .28.
+One explanation can be sought in the optimal number of topics for the LDA models that resulted from the grid search: two when training on \textsc{student answers}, and 20 when training on the \textsc{textbook chapter}. Two is the lowest possible number of topics that an LDA model can have. It is not so unexpected that the grid search yielded this as the best value when training on \textsc{student answers}, as in essence the student answers all revolved around the same topic (i.e., Whorf's language theory). As a result, however, the resulting vector space models only had two dimensions, which does not allow very fine distinctions between answers of different qualities. When visually inspecting the scatter plots of the outcomes of the LDA models with 2 topics trained on \textsc{student answers}, it can be seen that these models predict a 10 for many students, which results in relatively low correlations. As an example, the outcomes of one such model are printed as Figure \ref{lda-predicts-tens}. For this particular model, $\textit{r}_s$ = .28.
 
 \begin{figure}[h]
 	\centering
@@ -253,6 +257,9 @@ Before automatic grading models could actually be implemented in higher educatio
 \section*{Source code and data}
 The source code and data to replicate the analysis can be found on GitHub: \url{https://github.com/johannadevos/AutomaticGrading}
 %\nocite{Sag} % items in your bibliography file that are not cited in your text
+
+\section*{Acknowledgements} 
+I would like to thank Martha Larson, Simon Brugman and Christoph Aurnhammer for their feedback on earlier drafts of this paper. Thanks to Dennis Schutter, the course lecturer, for sharing the data with me. Finally, thanks to all the students who granted me permission to use their data.
 
 % add other references to the file bibliography.bib in this directory
 \bibliographystyle{clin} 
